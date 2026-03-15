@@ -35,6 +35,27 @@ financial planner CC/
 - **Scenario Comparison**: Compare different payment strategies
 - **Interest Analysis**: See exactly how much interest you'll pay
 
+### Bill Tracking System
+- **📋 Monthly Bills**: Track fixed monthly bills
+- **📊 Variable Monthly Bills**: Handle bills with fixed due dates but varying amounts (electric, gas, water)
+- **🔄 28-Day Cycle Bills**: Manage bills with 28-day cycles
+- **⏳ Limited Duration Bills**: Track loan payments with progress tracking
+- **💰 Bi-Weekly Income**: Calculate monthly estimates from bi-weekly pay
+- **📅 Bill Schedule**: 6-month calendar view of upcoming bills
+- **📊 Budget Summary**: Net cash flow analysis
+
+### Electric Bill Analysis Tool
+- **PDF Analysis**: Extract current charges from electric bill PDFs
+- **Seasonal Patterns**: Identify summer vs winter usage variations  
+- **Accurate Budgeting**: Calculate estimates based on actual usage (excludes previous balances)
+- **Historical Analysis**: Analyze years of billing data for trends
+
+#### To Update Electric Bill Analysis:
+1. Add new PDF bills to `bills/chariot/` folder
+2. Run: `python3 extract_bills.py`  
+3. Review updated `billing_summary.txt` for new estimates
+4. Update Variable Monthly Bill entries as needed
+
 ### User Interface
 - **Interactive Sidebar**: Easy card management within Google Sheets
 - **Quick Calculator**: Pop-up calculator for fast calculations

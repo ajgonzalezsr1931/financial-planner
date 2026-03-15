@@ -27,3 +27,13 @@ node_modules/
 .env.development.local
 .env.test.local
 .env.production.local
+
+# Personal bills and financial documents
+bills/
+*.pdf
+
+# Python virtual environment
+venv/
+__pycache__/
+*.pyc
+*.pyo

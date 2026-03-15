@@ -17,7 +17,8 @@ function onOpen() {
     .addSeparator()
     .addSubMenu(ui.createMenu('📋 Bill Tracker')
       .addItem('💳 Add Monthly Bill', 'addMonthlyBill')
-      .addItem('🔄 Add 28-Day Bill', 'add28DayBill') 
+      .addItem('� Add Variable Monthly Bill', 'addVariableMonthlyBill')
+      .addItem('�🔄 Add 28-Day Bill', 'add28DayBill') 
       .addItem('⏳ Add Limited Duration Bill', 'addLimitedBill')
       .addItem('💰 Add Bi-Weekly Income', 'addBiWeeklyIncome')
       .addItem('📅 View Bill Schedule', 'showBillSchedule')
@@ -944,6 +945,107 @@ function addMonthlyBill() {
 }
 
 /**
+ * Add a variable monthly bill (fixed due date, varying amount)
+ */
+function addVariableMonthlyBill() {
+  const ui = SpreadsheetApp.getUi();
+  
+  // Get bill name
+  const nameResult = ui.prompt(
+    'Add Variable Monthly Bill',
+    'Enter bill name (e.g., "Electric Bill", "Gas Bill", "Water Bill"):',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (nameResult.getSelectedButton() !== ui.Button.OK) return;
+  const billName = nameResult.getResponseText().trim();
+  
+  // Get estimated amount
+  const amountResult = ui.prompt(
+    'Estimated Amount',
+    'Enter estimated monthly amount for budgeting (e.g., 150.00):',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (amountResult.getSelectedButton() !== ui.Button.OK) return;
+  const estimatedAmount = parseFloat(amountResult.getResponseText().replace(/[$,]/g, ''));
+  
+  if (isNaN(estimatedAmount) || estimatedAmount <= 0) {
+    ui.alert('Error', 'Please enter a valid estimated amount.', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Get due date
+  const dateResult = ui.prompt(
+    'Due Date',
+    'Enter due date (day of month, e.g., 22 for the 22nd):',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (dateResult.getSelectedButton() !== ui.Button.OK) return;
+  const dueDay = parseInt(dateResult.getResponseText());
+  
+  if (isNaN(dueDay) || dueDay < 1 || dueDay > 31) {
+    ui.alert('Error', 'Please enter a valid day (1-31).', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Get optional range information
+  const rangeResult = ui.prompt(
+    'Amount Range (Optional)',
+    'Enter typical range like "100-200" or leave blank to skip:',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  let rangeInfo = '';
+  if (rangeResult.getSelectedButton() === ui.Button.OK) {
+    const rangeText = rangeResult.getResponseText().trim();
+    if (rangeText && rangeText.includes('-')) {
+      rangeInfo = rangeText;
+    }
+  }
+  
+  // Get optional notes
+  const notesResult = ui.prompt(
+    'Notes (Optional)',
+    'Enter any notes like "Higher in summer" or leave blank:',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  let notes = '';
+  if (notesResult.getSelectedButton() === ui.Button.OK) {
+    notes = notesResult.getResponseText().trim();
+  }
+  
+  // Combine range and notes for display
+  let displayAmount = `~$${estimatedAmount.toFixed(2)}`;
+  if (rangeInfo) {
+    displayAmount += ` (${rangeInfo})`;
+  }
+  
+  // Add to Bills sheet
+  const sheet = getOrCreateBillsSheet();
+  addBillToSheet(sheet, {
+    name: billName,
+    amount: estimatedAmount,
+    type: 'Variable Monthly',
+    dueDay: dueDay,
+    cycle: 'Monthly',
+    startDate: new Date(),
+    endDate: null,
+    totalPayments: rangeInfo,
+    notes: notes
+  });
+  
+  let successMessage = `Added variable monthly bill: ${billName} - ${displayAmount} due on the ${dueDay}${getOrdinalSuffix(dueDay)}`;
+  if (notes) {
+    successMessage += `\nNotes: ${notes}`;
+  }
+  
+  ui.alert('Success', successMessage, ui.ButtonSet.OK);
+}
+
+/**
  * Add a 28-day cycle bill
  */
 function add28DayBill() {
@@ -1230,7 +1332,26 @@ function addBillToSheet(sheet, bill) {
   
   // Format the amount column
   const lastRow = sheet.getLastRow();
-  sheet.getRange(lastRow, 2).setNumberFormat('"$"#,##0.00');
+  
+  // Special formatting for variable bills
+  if (bill.type === 'Variable Monthly') {
+    // Show estimated amount with tilde prefix
+    sheet.getRange(lastRow, 2).setValue(`~$${bill.amount.toFixed(2)}`);
+    sheet.getRange(lastRow, 2).setNumberFormat('@'); // Format as text
+    
+    // Set background color to indicate variable amount
+    sheet.getRange(lastRow, 2).setBackground('#FFF9C4'); // Light yellow
+    
+    // Add note to the amount cell if range info exists
+    if (bill.totalPayments && !bill.totalPayments.includes('/')) {
+      sheet.getRange(lastRow, 2).setNote(`Range: ${bill.totalPayments}\nThis is an estimated amount - actual bills will vary.`);
+    } else {
+      sheet.getRange(lastRow, 2).setNote('This is an estimated amount - actual bills will vary.');
+    }
+  } else {
+    // Standard formatting for fixed bills
+    sheet.getRange(lastRow, 2).setNumberFormat('"$"#,##0.00');
+  }
   
   // Format date columns
   if (bill.startDate) {
@@ -1422,6 +1543,10 @@ function showBillSchedule() {
       
       if (itemType === 'Income') {
         rowRange.setBackground('#E8F5E8'); // Light green for income
+      } else if (itemType.includes('Variable')) {
+        rowRange.setBackground('#FFF9C4'); // Light yellow for variable bills
+        // Add note to amount cell for variable bills
+        scheduleSheet.getRange(4 + i, 4).setNote('Variable amount - actual bill may differ');
       } else if (itemType.includes('Bill')) {
         rowRange.setBackground('#FFF3E0'); // Light orange for bills
       }
@@ -1490,7 +1615,7 @@ function showBudgetSummary() {
   const totalEstimatedMonthlyExpenses = totalMonthlyBills + estimated28DayMonthly;
   const netMonthlyFlow = totalMonthlyIncome - totalEstimatedMonthlyExpenses;
   
-  // Create budget summary
+  // Create budget summary with variable bill note
   const summaryData = [
     ['💰 MONTHLY BUDGET SUMMARY', ''],
     ['', ''],
@@ -1503,7 +1628,10 @@ function showBudgetSummary() {
     ['Total Monthly Expenses:', totalEstimatedMonthlyExpenses],
     ['', ''],
     ['💡 NET CASH FLOW', ''],
-    ['Available per Month:', netMonthlyFlow]
+    ['Available per Month:', netMonthlyFlow],
+    ['', ''],
+    ['📝 NOTE', ''],
+    ['Variable bills use estimates', 'Actual amounts may vary']
   ];
   
   budgetSheet.getRange(1, 1, summaryData.length, 2).setValues(summaryData);
