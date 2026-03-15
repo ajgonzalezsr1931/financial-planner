@@ -13,172 +13,20 @@ function onOpen() {
   ui.createMenu('Credit Card Planner')
     .addItem('Open Payment Planner', 'showSidebar')
     .addItem('Calculate Payment Amount', 'showPaymentCalculator')
-    .addItem('Update Credit Cards Sheet', 'updateCreditCardsSheet')
-    .addSeparator()
-    .addItem('🏠 Generate Mortgage Amortization', 'showMortgageDialog')
-    .addItem('🏠 Update Mortgage Status', 'updateMortgageStatus')
-    .addItem('🏠 Generate Simulation Table', 'generateExtraPaymentSimulation')
-    .addSeparator()
-    .addItem('Setup Validation System', 'setupValidationTrigger')
-    .addItem('Debug Triggers', 'debugTriggers')
-    .addItem('Test Validation Manually', 'testValidationManually')
-    .addItem('Simulate Checkbox Click', 'simulateCheckboxClick')
-    .addItem('Manual Validation Mode', 'enableManualValidation')
-    .addItem('Clear All Triggers', 'clearAllTriggers')
     .addItem('Clear All Data', 'clearAllData')
+    .addSeparator()
+    .addSubMenu(ui.createMenu('📋 Bill Tracker')
+      .addItem('💳 Add Monthly Bill', 'addMonthlyBill')
+      .addItem('🔄 Add 28-Day Bill', 'add28DayBill') 
+      .addItem('⏳ Add Limited Duration Bill', 'addLimitedBill')
+      .addItem('💰 Add Bi-Weekly Income', 'addBiWeeklyIncome')
+      .addItem('📅 View Bill Schedule', 'showBillSchedule')
+      .addItem('📊 Budget Summary', 'showBudgetSummary'))
+    .addSeparator()
+    .addSubMenu(ui.createMenu('🏠 Mortgage Tools')
+      .addItem('🏠 Generate Mortgage Table', 'generateMortgageAmortization')
+      .addItem('📊 Generate Simulation Table', 'generateExtraPaymentSimulation'))
     .addToUi();
-}
-
-/**
- * Manual test function to test validation without triggers
- */
-function testValidationManually() {
-  try {
-    const sheet = SpreadsheetApp.getActiveSheet();
-    const sheetName = sheet.getName();
-    
-    SpreadsheetApp.getUi().alert('Test Info', `Current sheet: ${sheetName}\nTesting validation on current sheet...`, SpreadsheetApp.getUi().ButtonSet.OK);
-    
-    // Test if this looks like a schedule sheet
-    if (!sheetName.includes(' Schedule')) {
-      SpreadsheetApp.getUi().alert('Error', `This doesn't appear to be a schedule sheet. Sheet name: "${sheetName}"\nPlease switch to a schedule sheet first.`, SpreadsheetApp.getUi().ButtonSet.OK);
-      return;
-    }
-    
-    // Extract card name
-    let cardName = sheetName.replace(' Schedule', '');
-    cardName = cardName.replace(/\s*\(Custom\s+\d{2}:\d{2}\)/, '').trim();
-    
-    // Test with first row (month 1)
-    const testRow = 9; // Row 9 should be first month
-    const monthCell = sheet.getRange(testRow, 7); // Column G
-    const paymentCell = sheet.getRange(testRow, 8); // Column H
-    const month = monthCell.getValue();
-    const paymentAmount = paymentCell.getValue();
-    
-    const testInfo = `Card Name: "${cardName}"\nMonth: ${month} (${typeof month})\nPayment Amount: ${paymentAmount} (${typeof paymentAmount})\n\nWill test updating Credit Cards sheet...`;
-    
-    const result = SpreadsheetApp.getUi().alert('Test Validation', testInfo, SpreadsheetApp.getUi().ButtonSet.OK_CANCEL);
-    
-    if (result === SpreadsheetApp.getUi().Button.OK) {
-      updateCreditCardPayment(cardName, month, paymentAmount);
-      SpreadsheetApp.getUi().alert('Test Complete', 'Manual validation test completed. Check the Credit Cards sheet and the Apps Script logs for details.', SpreadsheetApp.getUi().ButtonSet.OK);
-    }
-    
-  } catch (error) {
-    SpreadsheetApp.getUi().alert('Test Error', 'Error during manual test: ' + error.toString(), SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
-
-/**
- * Simulate the onEdit trigger for testing
- */
-function simulateCheckboxClick() {
-  try {
-    const sheet = SpreadsheetApp.getActiveSheet();
-    const selection = sheet.getActiveRange();
-    
-    if (!selection || selection.getColumn() !== 12) {
-      SpreadsheetApp.getUi().alert('Instructions', 'Please select a validation checkbox cell (column L) in a schedule sheet first, then run this test.', SpreadsheetApp.getUi().ButtonSet.OK);
-      return;
-    }
-    
-    // Create a mock event object
-    const mockEvent = {
-      range: selection,
-      source: SpreadsheetApp.getActiveSpreadsheet()
-    };
-    
-    const currentValue = selection.getValue();
-    SpreadsheetApp.getUi().alert('Simulating Click', `Simulating checkbox click on ${selection.getA1Notation()}\nCurrent value: ${currentValue}\nSheet: ${sheet.getName()}`, SpreadsheetApp.getUi().ButtonSet.OK);
-    
-    // Call the validation function directly
-    onValidationChange(mockEvent);
-    
-  } catch (error) {
-    SpreadsheetApp.getUi().alert('Simulation Error', 'Error during simulation: ' + error.toString(), SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
-
-/**
- * Enable manual validation mode with instructions
- */
-function enableManualValidation() {
-  const instructions = `MANUAL VALIDATION MODE\n\n` +
-    `If automatic validation isn't working, you can validate payments manually:\n\n` +
-    `1. Go to any Schedule sheet\n` +
-    `2. Select a checkbox cell in column L (validation column)\n` +
-    `3. Go to Credit Card Planner → Simulate Checkbox Click\n\n` +
-    `OR\n\n` +
-    `1. Go to any Schedule sheet\n` +
-    `2. Go to Credit Card Planner → Test Validation Manually\n\n` +
-    `This will manually update the Credit Cards sheet with the payment information.`;
-  
-  SpreadsheetApp.getUi().alert('Manual Validation Instructions', instructions, SpreadsheetApp.getUi().ButtonSet.OK);
-}
-
-/**
- * Debug function to see all triggers
- */
-function debugTriggers() {
-  const triggers = ScriptApp.getProjectTriggers();
-  let message = `Total triggers: ${triggers.length}\n\n`;
-  
-  triggers.forEach((trigger, index) => {
-    message += `Trigger ${index + 1}:\n`;
-    message += `  Function: ${trigger.getHandlerFunction()}\n`;
-    message += `  Event Type: ${trigger.getEventType()}\n`;
-    message += `  Source: ${trigger.getTriggerSource()}\n`;
-    message += `  Unique ID: ${trigger.getUniqueId()}\n\n`;
-  });
-  
-  if (triggers.length === 0) {
-    message += "No triggers found. You may need to run 'Setup Validation Trigger'.";
-  }
-  
-  SpreadsheetApp.getUi().alert('Trigger Debug Info', message, SpreadsheetApp.getUi().ButtonSet.OK);
-}
-
-/**
- * Clear all triggers (emergency function)
- */
-function clearAllTriggers() {
-  const triggers = ScriptApp.getProjectTriggers();
-  let deletedCount = 0;
-  
-  triggers.forEach(trigger => {
-    ScriptApp.deleteTrigger(trigger);
-    deletedCount++;
-  });
-  
-  SpreadsheetApp.getUi().alert('Triggers Cleared', `Deleted ${deletedCount} triggers. You will need to run 'Setup Validation Trigger' again to re-enable validation.`, SpreadsheetApp.getUi().ButtonSet.OK);
-}
-
-/**
- * Setup validation system using Google Sheets' built-in trigger
- */
-function setupValidationTrigger() {
-  try {
-    // Clear any old installable triggers first
-    const triggers = ScriptApp.getProjectTriggers();
-    let deletedCount = 0;
-    triggers.forEach(trigger => {
-      if (trigger.getHandlerFunction() === 'onValidationChange' || trigger.getHandlerFunction() === 'onEdit') {
-        ScriptApp.deleteTrigger(trigger);
-        deletedCount++;
-      }
-    });
-    
-    console.log(`Deleted ${deletedCount} existing triggers`);
-    
-    // Note: Google Sheets will automatically call onEdit() function when any cell is edited
-    // We don't need to create an installable trigger for this
-    
-    SpreadsheetApp.getUi().alert('Success', `Validation system is now active! Google Sheets will automatically detect checkbox changes.\n\n(Cleaned up ${deletedCount} old triggers)\n\nThe onEdit() function will run automatically when you check validation checkboxes.`, SpreadsheetApp.getUi().ButtonSet.OK);
-  } catch (error) {
-    console.error('setupValidationTrigger error:', error);
-    SpreadsheetApp.getUi().alert('Error', 'Setup error: ' + error.toString(), SpreadsheetApp.getUi().ButtonSet.OK);
-  }
 }
 
 // Show the main sidebar
@@ -195,41 +43,6 @@ function showPaymentCalculator() {
     .setWidth(400)
     .setHeight(300);
   SpreadsheetApp.getUi().showModalDialog(html, 'Payment Calculator');
-}
-
-// Show mortgage amortization dialog
-function showMortgageDialog() {
-  const ui = SpreadsheetApp.getUi();
-  
-  const result = ui.prompt(
-    '🏠 Mortgage Amortization Table',
-    'Enter your mortgage details (comma-separated):\n' +
-    'Format: OriginDate, OriginalLoanAmount, InterestRate%, MaturityDate, CurrentPaymentDate\n\n' +
-    'Example: 07/2021, 171615.18, 2.75, 07/2061, 03/2026',
-    ui.ButtonSet.OK_CANCEL
-  );
-  
-  if (result.getSelectedButton() === ui.Button.OK) {
-    const input = result.getResponseText().trim();
-    try {
-      const parts = input.split(',').map(p => p.trim());
-      if (parts.length !== 5) {
-        throw new Error('Please provide exactly 5 values separated by commas');
-      }
-      
-      const [originDate, originalLoanAmount, interestRate, maturityDate, currentPaymentDate] = parts;
-      
-      generateMortgageAmortization(
-        originDate,
-        parseFloat(originalLoanAmount),
-        parseFloat(interestRate),
-        maturityDate,
-        currentPaymentDate
-      );
-    } catch (error) {
-      ui.alert('Error', 'Invalid input: ' + error.message, ui.ButtonSet.OK);
-    }
-  }
 }
 
 /**
@@ -279,17 +92,9 @@ function calculatePayoffTimeline(balance, apr, monthlyPayment) {
     currentBalance -= principalPayment;
     totalInterestPaid += interestPayment;
     
-    // Use monthly payment for all months except adjust final payment if needed
-    let actualPayment = monthlyPayment;
-    
-    // If this payment would result in balance <= 0, adjust to exact amount needed
-    if (currentBalance <= 0.01) {
-      actualPayment = interestPayment + principalPayment;
-    }
-    
     timeline.push({
       month: month,
-      payment: Math.round(actualPayment * 100) / 100,
+      payment: monthlyPayment,
       interest: Math.round(interestPayment * 100) / 100,
       principal: Math.round(principalPayment * 100) / 100,
       balance: Math.round(currentBalance * 100) / 100
@@ -307,97 +112,17 @@ function calculatePayoffTimeline(balance, apr, monthlyPayment) {
 }
 
 /**
- * Update existing Credit Cards sheet to include monthly payment columns
- */
-function updateCreditCardsSheet() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Credit Cards');
-  if (!sheet) {
-    SpreadsheetApp.getUi().alert('No Credit Cards sheet found to update.');
-    return;
-  }
-  
-  // Check if monthly columns already exist
-  const lastCol = sheet.getLastColumn();
-  if (lastCol >= 20) { // 8 original + 12 monthly = 20 columns
-    return; // Already has monthly columns
-  }
-  
-  // Add monthly payment headers
-  const monthlyHeaders = [];
-  for (let i = 1; i <= 12; i++) {
-    monthlyHeaders.push(`Month ${i}`);
-  }
-  
-  // Add headers starting from column I (column 9)
-  sheet.getRange(1, 9, 1, 12).setValues([monthlyHeaders]);
-  sheet.getRange(1, 9, 1, 12).setFontWeight('bold');
-  
-  // Update existing card data with monthly payments
-  if (sheet.getLastRow() > 1) {
-    const existingData = sheet.getRange(2, 1, sheet.getLastRow() - 1, 8).getValues();
-    
-    existingData.forEach((row, index) => {
-      const targetMonths = row[4]; // Target Months (column E)
-      const requiredPayment = row[5]; // Required Payment (column F)
-      
-      // Add monthly payment data for this card
-      const monthlyPayments = [];
-      for (let i = 1; i <= 12; i++) {
-        if (i <= targetMonths) {
-          monthlyPayments.push(requiredPayment);
-        } else {
-          monthlyPayments.push('');
-        }
-      }
-      
-      // Update the row with monthly payment data
-      sheet.getRange(index + 2, 9, 1, 12).setValues([monthlyPayments]);
-    });
-  }
-  
-  // Auto-resize all columns
-  sheet.autoResizeColumns(1, 20);
-  
-  SpreadsheetApp.getUi().alert('Credit Cards sheet updated with monthly payment columns!');
-}
-
-/**
- * Helper function to ensure Credit Cards sheet has correct structure
- */
-function updateCreditCardsSheetStructure(sheet) {
-  // Add headers if this is the first card or if headers are missing
-  if (sheet.getLastRow() === 0) {
-    const headers = ['Card Name', 'Current Balance', 'APR (%)', 'Minimum Payment', 'Target Months', 'Required Payment', 'Total Interest', 'Total Paid'];
-    // Add monthly payment columns
-    const monthlyHeaders = [];
-    for (let i = 1; i <= 12; i++) {
-      monthlyHeaders.push(`Month ${i}`);
-    }
-    const allHeaders = headers.concat(monthlyHeaders);
-    sheet.getRange(1, 1, 1, allHeaders.length).setValues([allHeaders]);
-    sheet.getRange(1, 1, 1, allHeaders.length).setFontWeight('bold');
-  } else {
-    // Check if monthly columns exist and add them if missing
-    const lastCol = sheet.getLastColumn();
-    if (lastCol < 20) { // 8 original + 12 monthly = 20 columns
-      const monthlyHeaders = [];
-      for (let i = 1; i <= 12; i++) {
-        monthlyHeaders.push(`Month ${i}`);
-      }
-      sheet.getRange(1, 9, 1, 12).setValues([monthlyHeaders]);
-      sheet.getRange(1, 9, 1, 12).setFontWeight('bold');
-    }
-  }
-}
-
-/**
  * Add a new credit card to the spreadsheet
  */
 function addCreditCard(cardData) {
   const sheet = getOrCreateSheet('Credit Cards');
   
-  // Always ensure the sheet has the correct structure
-  updateCreditCardsSheetStructure(sheet);
+  // Add headers if this is the first card
+  if (sheet.getLastRow() === 0) {
+    const headers = ['Card Name', 'Current Balance', 'APR (%)', 'Minimum Payment', 'Target Months', 'Required Payment', 'Total Interest', 'Total Paid'];
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    sheet.getRange(1, 1, 1, headers.length).setFontWeight('bold');
+  }
   
   const requiredPayment = calculateMonthlyPayment(cardData.balance, cardData.apr, cardData.targetMonths);
   const timeline = calculatePayoffTimeline(cardData.balance, cardData.apr, requiredPayment);
@@ -413,22 +138,11 @@ function addCreditCard(cardData) {
     timeline.totalPaid
   ];
   
-  // Add monthly payment columns (12 months)
-  const monthlyPayments = [];
-  for (let i = 1; i <= 12; i++) {
-    if (i <= cardData.targetMonths) {
-      monthlyPayments.push(requiredPayment);
-    } else {
-      monthlyPayments.push('');
-    }
-  }
-  const fullRow = row.concat(monthlyPayments);
+  sheet.appendRow(row);
   
-  sheet.appendRow(fullRow);
-  
-  // Auto-resize columns including monthly payment columns
-  const totalColumns = 8 + 12; // 8 original columns + 12 monthly payment columns
-  sheet.autoResizeColumns(1, totalColumns);
+  // Auto-resize columns
+  const headers = ['Card Name', 'Current Balance', 'APR (%)', 'Minimum Payment', 'Target Months', 'Required Payment', 'Total Interest', 'Total Paid'];
+  sheet.autoResizeColumns(1, headers.length);
   
   return {
     success: true,
@@ -440,10 +154,6 @@ function addCreditCard(cardData) {
 
 /**
  * Generate detailed payoff schedule for a specific card
- * TODO: Next session - integrate actual payments from Credit Cards sheet
- * - Read validated payments from columns I-T
- * - Calculate remaining balance after actual payments
- * - Adjust payment schedule for remaining months to meet target
  */
 function generatePayoffSchedule(cardName, balance, apr, monthlyPayment, minPayment) {
   const timeline = calculatePayoffTimeline(balance, apr, monthlyPayment);
@@ -558,7 +268,7 @@ function generatePayoffSchedule(cardName, balance, apr, monthlyPayment, minPayme
   }
   
   // Add interactive timeline starting at G8 with interconnected formulas
-  addInteractiveTimeline(sheet, balance, apr, monthlyPayment, timeline.totalMonths, false, cardName); // false for regular schedule
+  addInteractiveTimeline(sheet, balance, apr, monthlyPayment, timeline.totalMonths, false); // false for regular schedule
   
   sheet.autoResizeColumns(1, headers.length);
   sheet.autoResizeColumns(7, 5); // Auto-resize timeline columns G-K
@@ -569,14 +279,14 @@ function generatePayoffSchedule(cardName, balance, apr, monthlyPayment, minPayme
 /**
  * Add interactive timeline with interconnected formulas starting at G8
  */
-function addInteractiveTimeline(sheet, originalBalance, apr, defaultPayment, maxMonths, isCustomSchedule = false, cardName = '') {
+function addInteractiveTimeline(sheet, originalBalance, apr, defaultPayment, maxMonths, isCustomSchedule = false) {
   const timelineStartCol = 7; // Column G
   const timelineStartRow = 8;
   
-  // Timeline headers in G8:L8 - different label for custom schedules
+  // Timeline headers in G8:K8 - different label for custom schedules
   const timelineLabel = isCustomSchedule ? 'Actual Custom' : 'Actual Payoff';
-  const timelineHeaders = [timelineLabel, 'Payment', 'Interest', 'Principal', 'Remaining Balance', 'Paid ✓'];
-  const headerRange = sheet.getRange(timelineStartRow, timelineStartCol, 1, 6);
+  const timelineHeaders = [timelineLabel, 'Payment', 'Interest', 'Principal', 'Remaining Balance'];
+  const headerRange = sheet.getRange(timelineStartRow, timelineStartCol, 1, 5);
   headerRange.setValues([timelineHeaders]);
   
   // Different colors for custom schedule timeline
@@ -605,13 +315,12 @@ function addInteractiveTimeline(sheet, originalBalance, apr, defaultPayment, max
     const paymentCell = sheet.getRange(currentRow, timelineStartCol + 1);
     let paymentFormula;
     if (month === 1) {
-      // First month: Use default payment (user can manually change this to $75)
-      paymentFormula = `=${defaultPayment}`;
+      // First month: MIN(Default Payment, Balance + Interest)
+      paymentFormula = `=MIN(${defaultPayment},B2+(B2*B3/100/12))`;
     } else {
-      // Subsequent months: Use full default payment, but adjust for final payment
+      // Subsequent months: MIN(Default Payment, Previous Balance + Interest)
       const prevBalanceCell = sheet.getRange(currentRow - 1, timelineStartCol + 4).getA1Notation();
-      // If previous balance + interest is less than default payment, use exact amount needed
-      paymentFormula = `=IF(${prevBalanceCell}<=0,0,IF(${prevBalanceCell}+(${prevBalanceCell}*$B$3/100/12)<=${defaultPayment},${prevBalanceCell}+(${prevBalanceCell}*$B$3/100/12),${defaultPayment}))`;
+      paymentFormula = `=MIN(${defaultPayment},${prevBalanceCell}+(${prevBalanceCell}*B3/100/12))`;
     }
     paymentCell.setFormula(paymentFormula);
     paymentCell.setBackground('#E8F5E8')  // Light green to indicate it's dynamic
@@ -622,11 +331,11 @@ function addInteractiveTimeline(sheet, originalBalance, apr, defaultPayment, max
     let interestFormula;
     if (month === 1) {
       // First month: Interest = Starting Balance * Monthly Rate
-      interestFormula = `=IF(B2<=0,0,B2*$B$3/100/12)`;
+      interestFormula = `=IF(B2<=0,0,B2*B3/100/12)`;
     } else {
       // Subsequent months: Interest = Previous Balance * Monthly Rate
       const prevBalanceCell = sheet.getRange(currentRow - 1, timelineStartCol + 4).getA1Notation();
-      interestFormula = `=IF(${prevBalanceCell}<=0,0,${prevBalanceCell}*$B$3/100/12)`;
+      interestFormula = `=IF(${prevBalanceCell}<=0,0,${prevBalanceCell}*B3/100/12)`;
     }
     const interestCell = sheet.getRange(currentRow, timelineStartCol + 2);
     interestCell.setFormula(interestFormula);
@@ -664,22 +373,13 @@ function addInteractiveTimeline(sheet, originalBalance, apr, defaultPayment, max
     balanceCell.setFormula(balanceFormula);
     balanceCell.setNumberFormat('"$"#,##0.00');
     
-    // Column L: Validation checkbox
-    const validationCell = sheet.getRange(currentRow, timelineStartCol + 5);
-    validationCell.insertCheckboxes()
-      .setBackground('#FFF8DC')  // Light yellow background
-      .setBorder(true, true, true, true, false, false, '#FFD700', SpreadsheetApp.BorderStyle.SOLID);
-    
     // Apply alternating row colors
-    const rowRange = sheet.getRange(currentRow, timelineStartCol, 1, 6);
+    const rowRange = sheet.getRange(currentRow, timelineStartCol, 1, 5);
     if (month % 2 === 0) {
       rowRange.setBackground('#FFF3E0');  // Light orange
     } else {
       rowRange.setBackground('#F3E5F5');  // Light purple
     }
-    
-    // Override validation cell background
-    validationCell.setBackground('#FFF8DC');  // Keep validation cell light yellow
     
     // Add borders for definition
     rowRange.setBorder(false, false, true, false, false, false, '#CCCCCC', SpreadsheetApp.BorderStyle.SOLID);
@@ -691,108 +391,117 @@ function addInteractiveTimeline(sheet, originalBalance, apr, defaultPayment, max
     }
   }
   
-  // Always add dynamic row handling to extend timeline if needed
-  // The function will determine if additional rows are actually needed
-  addDynamicBalanceHandling(sheet, timelineStartCol, dataStartRow, monthsToAdd, originalBalance, apr, defaultPayment);
+  // Add dynamic row handling for remaining balance
+  addDynamicBalanceHandling(sheet, timelineStartCol, dataStartRow, monthsToAdd, originalBalance, apr);
+  
+  // Add conditional formatting for remaining balance to show progress
+  const balanceRange = sheet.getRange(dataStartRow, timelineStartCol + 4, monthsToAdd, 1);
+  
+  // Add a summary section below the timeline
+  const summaryRow = dataStartRow + monthsToAdd + 2;
+  sheet.getRange(summaryRow, timelineStartCol, 1, 5).setValues([['Summary:', 'Total Payments', 'Total Interest', 'Final Balance', 'Payoff Month']]);
+  sheet.getRange(summaryRow, timelineStartCol, 1, 5)
+    .setBackground('#9C27B0')  // Purple header
+    .setFontColor('#FFFFFF')
+    .setFontWeight('bold');
+  
+  // Summary formulas
+  const paymentsRange = `${sheet.getRange(dataStartRow, timelineStartCol + 1).getA1Notation()}:${sheet.getRange(dataStartRow + monthsToAdd - 1, timelineStartCol + 1).getA1Notation()}`;
+  const interestRange = `${sheet.getRange(dataStartRow, timelineStartCol + 2).getA1Notation()}:${sheet.getRange(dataStartRow + monthsToAdd - 1, timelineStartCol + 2).getA1Notation()}`;
+  const balancesRange = `${sheet.getRange(dataStartRow, timelineStartCol + 4).getA1Notation()}:${sheet.getRange(dataStartRow + monthsToAdd - 1, timelineStartCol + 4).getA1Notation()}`;
+  
+  sheet.getRange(summaryRow + 1, timelineStartCol + 1).setFormula(`=SUM(${paymentsRange})`).setNumberFormat('"$"#,##0.00');
+  sheet.getRange(summaryRow + 1, timelineStartCol + 2).setFormula(`=SUM(${interestRange})`).setNumberFormat('"$"#,##0.00');
+  sheet.getRange(summaryRow + 1, timelineStartCol + 3).setFormula(`=MIN(${balancesRange})`).setNumberFormat('"$"#,##0.00');
+  sheet.getRange(summaryRow + 1, timelineStartCol + 4).setFormula(`=IFERROR(MATCH(TRUE,${balancesRange}=0,0),"Not paid off")`);
   
   // Add instructions in a note with troubleshooting info
   const scheduleType = isCustomSchedule ? "CUSTOM" : "REGULAR";
   const instructionText = 
     `INTERACTIVE TIMELINE INSTRUCTIONS (${scheduleType} SCHEDULE):\\n\\n` +
-    "• MIXED PAYMENTS SUPPORTED: You can manually change payment amounts in column H\\n" +
-    "• Example: Change H9 from $" + defaultPayment.toFixed(2) + " to $75 for different first payment\\n" +
-    "• All other columns (Interest, Principal, Balance) will recalculate automatically\\n" +
-    "• Final payments automatically adjust to exact amount needed\\n" +
+    "• Payment amounts automatically adjust to prevent overpayments\\n" +
+    "• Final payments are capped at remaining balance + interest\\n" +
+    "• Interest, Principal, and Remaining Balance automatically recalculate\\n" +
+    "• Payment column shows optimal payment amounts (auto-calculated)\\n" +
+    "• All calculations update automatically when balance or APR changes\\n" +
     "• Monthly interest rate: " + (apr/12).toFixed(4) + "%\\n" +
     "• Balance reference: B2 (" + originalBalance + ")\\n" +
     "• APR reference: B3 (" + apr + "%)\\n" +
-    "• Default payment: $" + defaultPayment.toFixed(2) + " (but can be customized)\\n" +
+    "• Default payment: $" + defaultPayment.toFixed(2) + " (adjusted as needed)\\n" +
     (isCustomSchedule ? "• This is a CUSTOM schedule - original schedules remain unchanged\\n" : "") +
-    "• TO CREATE MIXED SCHEDULE: Edit payment amounts in column H as needed\\n\\n" +
+    "• Payments automatically optimize to prevent wasteful overpayments!\\n\\n" +
     "TROUBLESHOOTING: If calculations seem wrong, verify B2 contains balance and B3 contains APR percentage.";
   
   sheet.getRange(timelineStartRow, timelineStartCol).setNote(instructionText);
-  
-  // Add conditional formatting to highlight zero balances
-  const balanceColumnRange = sheet.getRange(dataStartRow, timelineStartCol + 4, monthsToAdd, 1);
-  const conditionalFormatRule = SpreadsheetApp.newConditionalFormatRule()
-    .setRanges([balanceColumnRange])
-    .whenNumberLessThanOrEqualTo(0.01)
-    .setBackground('#4CAF50')  // Green background for paid off
-    .setFontColor('#FFFFFF')   // White text
-    .build();
-  const rules = sheet.getConditionalFormatRules();
-  rules.push(conditionalFormatRule);
-  sheet.setConditionalFormatRules(rules);
-  
-  // Add a helper note for mixed payment schedules
-  const firstPaymentCell = sheet.getRange(dataStartRow, timelineStartCol + 1);
-  firstPaymentCell.setNote("MIXED PAYMENTS: You can edit this cell to set a different first payment amount (e.g., $75). All other calculations will update automatically.");
-  
-  // Add validation note
-  const firstValidationCell = sheet.getRange(dataStartRow, timelineStartCol + 5);
-  firstValidationCell.setNote("PAYMENT VALIDATION: Check this box when you make the payment. This will update the Credit Cards sheet to track your actual payments.");
 }
 
 /**
  * Add dynamic row handling to extend timeline if balance remains
  */
-function addDynamicBalanceHandling(sheet, timelineStartCol, dataStartRow, initialMonths, originalBalance, apr, defaultPayment) {
-  // Guard against invalid initial months
-  if (initialMonths <= 0) {
-    return; // Nothing to handle if no initial months
+function addDynamicBalanceHandling(sheet, timelineStartCol, dataStartRow, initialMonths, originalBalance, apr) {
+  // Add a formula in a hidden area to check if additional months are needed
+  const checkRow = dataStartRow + initialMonths + 10; // Place check formulas well below data
+  
+  // Formula to check if last balance > 0
+  const lastBalanceCell = sheet.getRange(dataStartRow + initialMonths - 1, timelineStartCol + 4).getA1Notation();
+  sheet.getRange(checkRow, timelineStartCol).setFormula(`=IF(${lastBalanceCell}>0.01,"EXTEND","COMPLETE")`);
+  
+  // Add up to 24 additional months that will only show if needed
+  const maxExtraMonths = 24;
+  
+  for (let extraMonth = 1; extraMonth <= maxExtraMonths; extraMonth++) {
+    const currentRow = dataStartRow + initialMonths + extraMonth - 1;
+    const month = initialMonths + extraMonth;
+    
+    // Only show this row if previous balance > 0.01
+    const prevBalanceCell = sheet.getRange(currentRow - 1, timelineStartCol + 4).getA1Notation();
+    
+    // Column G: Month number (conditional) - show month if balance remains
+    sheet.getRange(currentRow, timelineStartCol).setFormula(`=IF(${prevBalanceCell}>0.01,${month},"")`);
+    
+    // Column H: Payment (automatic adjustment for extension months)
+    const paymentCell = sheet.getRange(currentRow, timelineStartCol + 1);
+    // Simplified formula to avoid nesting issues
+    paymentCell.setFormula(`=IF(${prevBalanceCell}>0.01,MIN(${defaultPayment},${prevBalanceCell}+(${prevBalanceCell}*B3/100/12)),"")`);
+    paymentCell.setBackground('#FFE0E0')  // Light red to indicate extra month
+      .setBorder(true, true, true, true, false, false, '#FF6B6B', SpreadsheetApp.BorderStyle.SOLID)
+      .setNumberFormat('"$"#,##0.00');
+    
+    // Column I: Interest calculation (conditional)
+    const interestCell = sheet.getRange(currentRow, timelineStartCol + 2);
+    interestCell.setFormula(`=IF(${prevBalanceCell}>0.01,${prevBalanceCell}*B3/100/12,"")`);
+    interestCell.setNumberFormat('"$"#,##0.00');
+    
+    // Column J: Principal calculation (conditional)
+    const paymentCellRef = paymentCell.getA1Notation();
+    const interestCellRef = interestCell.getA1Notation();
+    const principalCell = sheet.getRange(currentRow, timelineStartCol + 3);
+    principalCell.setFormula(`=IF(${prevBalanceCell}>0.01,MIN(MAX(0,${paymentCellRef}-${interestCellRef}),${prevBalanceCell}),"")`);
+    principalCell.setNumberFormat('"$"#,##0.00');
+    
+    // Column K: Remaining balance (conditional)
+    const principalCellRef = principalCell.getA1Notation();
+    const balanceFormula = `=IF(${prevBalanceCell}>0.01,MAX(0,${prevBalanceCell}-${principalCellRef}),"")`;
+    const balanceCell = sheet.getRange(currentRow, timelineStartCol + 4);
+    balanceCell.setFormula(balanceFormula);
+    balanceCell.setNumberFormat('"$"#,##0.00');
+    
+    // Apply special styling for extension rows
+    const rowRange = sheet.getRange(currentRow, timelineStartCol, 1, 5);
+    rowRange.setBackground('#FFE8E8');  // Light red background for extension rows
+    rowRange.setBorder(false, false, true, false, false, false, '#FF9999', SpreadsheetApp.BorderStyle.SOLID);
+    
+    // Add conditional formatting rule to hide entire row if not needed
+    const hideRowRule = SpreadsheetApp.newConditionalFormatRule()
+      .whenFormulaSatisfied(`=${prevBalanceCell}<=0.01`)
+      .setFontColor('#FFFFFF')
+      .setBackground('#FFFFFF')
+      .build();
+    
+    const rules = sheet.getConditionalFormatRules();
+    rules.push(hideRowRule);
+    sheet.setConditionalFormatRules(rules);
   }
-  
-  // Add exactly ONE extension row that only shows if there's a remaining balance
-  const currentRow = dataStartRow + initialMonths;
-  const month = initialMonths + 1;
-  const prevBalanceCell = sheet.getRange(currentRow - 1, timelineStartCol + 4).getA1Notation();
-  
-  // Column G: Month number (conditional) - show month only if balance remains
-  const monthCell = sheet.getRange(currentRow, timelineStartCol);
-  monthCell.setFormula(`=IF(${prevBalanceCell}>0.01,${month},"")`);
-  
-  // Column H: Payment - only show if balance remains
-  const paymentCell = sheet.getRange(currentRow, timelineStartCol + 1);
-  paymentCell.setFormula(`=IF(${prevBalanceCell}>0.01,${prevBalanceCell}+(${prevBalanceCell}*$B$3/100/12),"")`);
-  paymentCell.setBackground('#E8FFE8')  // Light green to indicate final payment
-    .setBorder(true, true, true, true, false, false, '#4CAF50', SpreadsheetApp.BorderStyle.SOLID_THICK);
-  
-  // Column I: Interest calculation (conditional)
-  const interestCell = sheet.getRange(currentRow, timelineStartCol + 2);
-  interestCell.setFormula(`=IF(${prevBalanceCell}>0.01,${prevBalanceCell}*$B$3/100/12,"")`);
-  
-  // Column J: Principal calculation (conditional)
-  const paymentCellRef = paymentCell.getA1Notation();
-  const interestCellRef = interestCell.getA1Notation();
-  const principalCell = sheet.getRange(currentRow, timelineStartCol + 3);
-  principalCell.setFormula(`=IF(AND(${prevBalanceCell}>0.01,ISNUMBER(${paymentCellRef})),MIN(${paymentCellRef}-${interestCellRef},${prevBalanceCell}),"")`);
-  
-  // Column K: Remaining balance (should be 0 for final payment)
-  const principalCellRef = principalCell.getA1Notation();
-  const balanceCell = sheet.getRange(currentRow, timelineStartCol + 4);
-  balanceCell.setFormula(`=IF(AND(${prevBalanceCell}>0.01,ISNUMBER(${principalCellRef})),MAX(0,${prevBalanceCell}-${principalCellRef}),"")`);
-  
-  // Apply conditional formatting to currency columns - only format if there's a value
-  [paymentCell, interestCell, principalCell, balanceCell].forEach(cell => {
-    // Use a custom format that only applies currency formatting when there's a numeric value
-    cell.setNumberFormat('[>0]"$"#,##0.00;[<0]"$"#,##0.00;""');
-  });
-  
-  // Add validation checkbox for extension row
-  const extensionValidationCell = sheet.getRange(currentRow, timelineStartCol + 5);
-  extensionValidationCell.setFormula(`=IF(${prevBalanceCell}>0.01,FALSE,"")`);
-  extensionValidationCell.insertCheckboxes()
-    .setBackground('#FFF8DC');  // Light yellow background
-  
-  // Apply final payment styling
-  const rowRange = sheet.getRange(currentRow, timelineStartCol, 1, 6);
-  rowRange.setBackground('#E8F5E8');  // Light green background for extension row
-  rowRange.setBorder(false, false, true, false, false, false, '#4CAF50', SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
-  rowRange.setFontWeight('bold'); // Make extension row bold
-  
-  // Override validation cell background
-  extensionValidationCell.setBackground('#FFF8DC');  // Keep validation cell light yellow
 }
 
 /**
@@ -961,7 +670,6 @@ function getCreditCards() {
     return [];
   }
   
-  // Read the first 8 columns (original card data)
   const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 8).getValues();
   return data.map(row => ({
     name: row[0],
@@ -970,507 +678,6 @@ function getCreditCards() {
     minPayment: row[3],
     targetMonths: row[4]
   }));
-}
-
-/**
- * TODO: Next session - Read actual validated payments from Credit Cards sheet
- * @param {string} cardName - Name of the credit card
- * @returns {Object} Object containing actual payments and calculated remaining balance
- */
-function getActualPayments(cardName) {
-  // PLACEHOLDER - To be implemented next session
-  // Will read columns I-T (months 1-12) from Credit Cards sheet
-  // Calculate remaining balance after actual payments
-  // Return: { actualPayments: [], remainingBalance: number, monthsPaid: number }
-  return {
-    actualPayments: [],
-    remainingBalance: null,
-    monthsPaid: 0
-  };
-}
-
-/**
- * TODO: Next session - Calculate adjusted payment schedule based on actual payments
- * @param {string} cardName - Name of the credit card  
- * @param {number} originalBalance - Starting balance
- * @param {number} apr - Annual percentage rate
- * @param {number} targetMonths - Target months for payoff
- * @returns {Object} Adjusted payment schedule and timeline
- */
-function generateAdjustedPayoffSchedule(cardName, originalBalance, apr, targetMonths) {
-  // PLACEHOLDER - To be implemented next session
-  // Will integrate getActualPayments() results
-  // Recalculate required payments for remaining months
-  // Generate timeline showing actual vs planned payments
-  return null;
-}
-
-/**
- * Calculate mortgage payment using standard amortization formula
- */
-function calculateMortgagePayment(principal, annualRate, totalMonths) {
-  if (annualRate === 0) {
-    return principal / totalMonths;
-  }
-  
-  const monthlyRate = annualRate / 100 / 12;
-  const payment = principal * (monthlyRate * Math.pow(1 + monthlyRate, totalMonths)) / 
-                  (Math.pow(1 + monthlyRate, totalMonths) - 1);
-  
-  return Math.round(payment * 100) / 100;
-}
-
-/**
- * Calculate original loan amount from current balance and payments made
- */
-function calculateOriginalLoanAmount(currentBalance, annualRate, monthsPaid, totalMonths) {
-  if (annualRate === 0) {
-    return currentBalance + (currentBalance * monthsPaid / (totalMonths - monthsPaid));
-  }
-  
-  const monthlyRate = annualRate / 100 / 12;
-  const remainingMonths = totalMonths - monthsPaid;
-  
-  // Calculate what the monthly payment would be for the original loan
-  // Working backwards from current balance and remaining payments
-  const monthlyPayment = currentBalance * (monthlyRate * Math.pow(1 + monthlyRate, remainingMonths)) / 
-                        (Math.pow(1 + monthlyRate, remainingMonths) - 1);
-  
-  // Calculate original principal from monthly payment and total term
-  const originalPrincipal = monthlyPayment * (Math.pow(1 + monthlyRate, totalMonths) - 1) / 
-                           (monthlyRate * Math.pow(1 + monthlyRate, totalMonths));
-  
-  return Math.round(originalPrincipal * 100) / 100;
-}
-
-/**
- * Generate complete mortgage amortization table
- */
-function generateMortgageAmortization(originDate, originalLoanAmount, annualRate, maturityDate, currentPaymentDate) {
-  try {
-    // Parse dates
-    const [startMonth, startYear] = originDate.split('/');
-    const [endMonth, endYear] = maturityDate.split('/');
-    const [currentMonth, currentYear] = currentPaymentDate.split('/');
-    
-    const startDateObj = new Date(parseInt(startYear), parseInt(startMonth) - 1, 1);
-    const endDateObj = new Date(parseInt(endYear), parseInt(endMonth) - 1, 1);
-    const currentDateObj = new Date(parseInt(currentYear), parseInt(currentMonth) - 1, 1);
-    
-    // Calculate months
-    const totalMonths = (endDateObj.getFullYear() - startDateObj.getFullYear()) * 12 + 
-                       (endDateObj.getMonth() - startDateObj.getMonth());
-    const monthsPaid = (currentDateObj.getFullYear() - startDateObj.getFullYear()) * 12 + 
-                      (currentDateObj.getMonth() - startDateObj.getMonth()) + 1;
-    
-    // Calculate monthly payment from original loan amount
-    const monthlyRate = annualRate / 100 / 12;
-    const monthlyPayment = calculateMortgagePayment(originalLoanAmount, annualRate, totalMonths);
-    
-    // Create amortization sheet
-    const sheet = getOrCreateSheet('Mortgage Amortization');
-    sheet.clear();
-    
-    // Header section with mortgage details
-    const headerRange = sheet.getRange(1, 1, 8, 2);
-    headerRange.setValues([
-      ['🏠 Mortgage Loan Details', ''],
-      ['Original Loan Amount:', originalLoanAmount],
-      ['Current Balance (after ' + currentPaymentDate + '):', 0], // Will be updated after calculation
-      ['Annual Interest Rate:', annualRate + '%'],
-      ['Monthly Payment (P&I):', monthlyPayment],
-      ['Loan Origin Date:', originDate],
-      ['Loan Maturity Date:', maturityDate],
-      ['Payments Made / Total:', `${monthsPaid} / ${totalMonths}`]
-    ]);
-    
-    // Format header
-    sheet.getRange(1, 1).setBackground('#2E7D32').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(14);
-    sheet.getRange(2, 1, 7, 1).setBackground('#4CAF50').setFontColor('#FFFFFF').setFontWeight('bold');
-    sheet.getRange(2, 2, 7, 1).setBackground('#81C784').setFontWeight('bold');
-    
-    // Format currency cells
-    sheet.getRange(2, 2).setNumberFormat('"$"#,##0.00'); // Original loan
-    sheet.getRange(5, 2).setNumberFormat('"$"#,##0.00'); // Monthly payment
-    
-    // Amortization table headers
-    const tableStartRow = 10;
-    const headers = ['Payment #', 'Date', 'Payment', 'Principal', 'Interest', 'Balance', 'Status'];
-    const headerRange2 = sheet.getRange(tableStartRow, 1, 1, headers.length);
-    headerRange2.setValues([headers]);
-    headerRange2.setBackground('#1976D2').setFontColor('#FFFFFF').setFontWeight('bold');
-    
-    // Generate amortization schedule
-    const scheduleData = [];
-    let balance = originalLoanAmount;
-    let currentBalance = 0; // Balance after current payment date
-    
-    for (let i = 1; i <= totalMonths; i++) {
-      const paymentDate = new Date(startDateObj.getFullYear(), startDateObj.getMonth() + i - 1, 1);
-      let interestPayment = balance * monthlyRate;
-      let principalPayment = monthlyPayment - interestPayment;
-      
-      // Round to cents for precision
-      interestPayment = Math.round(interestPayment * 100) / 100;
-      principalPayment = Math.round(principalPayment * 100) / 100;
-      
-      // Update balance
-      balance = Math.max(0, balance - principalPayment);
-      balance = Math.round(balance * 100) / 100;
-      
-      // Capture balance after the current payment date
-      if (i === monthsPaid) {
-        currentBalance = balance;
-      }
-      
-      // Determine status based on current payment date
-      let status = '';
-      if (i <= monthsPaid) { // Through current payment date
-        status = 'PAID';
-      } else if (i === monthsPaid + 1) { // Next month after current payment
-        status = 'CURRENT';
-      } else {
-        status = 'REMAINING';
-      }
-      
-      scheduleData.push([
-        i,
-        Utilities.formatDate(paymentDate, Session.getScriptTimeZone(), 'MMM yyyy'),
-        monthlyPayment,
-        principalPayment,
-        interestPayment,
-        balance,
-        status
-      ]);
-    }
-    
-    // Add data to sheet with old payments moved to bottom
-    const threeMonthsAgo = new Date(currentDateObj.getFullYear(), currentDateObj.getMonth() - 3, 1);
-    
-    // Separate recent payments (last 3 months + current + future) from old payments
-    const recentPayments = [];
-    const oldPayments = [];
-    
-    scheduleData.forEach(payment => {
-      const paymentNum = payment[0];
-      const paymentDate = new Date(startDateObj.getFullYear(), startDateObj.getMonth() + paymentNum - 1, 1);
-      
-      if (paymentDate >= threeMonthsAgo || payment[6] === 'CURRENT' || payment[6] === 'REMAINING') {
-        recentPayments.push(payment);
-      } else {
-        oldPayments.push(payment);
-      }
-    });
-    
-    // Combine recent payments first, then old payments
-    const organizedData = [...recentPayments, ...oldPayments];
-    
-    // Add separator row between recent and old payments if there are old payments
-    let separatorRowIndex = -1;
-    if (oldPayments.length > 0) {
-      separatorRowIndex = recentPayments.length;
-    }
-    
-    const dataRange = sheet.getRange(tableStartRow + 1, 1, organizedData.length, headers.length);
-    dataRange.setValues(organizedData);
-    
-    // Format currency columns
-    const currencyColumns = [3, 4, 5, 6]; // Payment, Principal, Interest, Balance
-    currencyColumns.forEach(col => {
-      sheet.getRange(tableStartRow + 1, col, organizedData.length, 1).setNumberFormat('"$"#,##0.00');
-    });
-    
-    // Add visual separator between recent and old payments
-    if (separatorRowIndex > 0) {
-      const separatorRow = tableStartRow + 1 + separatorRowIndex;
-      sheet.getRange(separatorRow, 1, 1, headers.length)
-        .setBorder(true, false, false, false, false, false, '#FF9800', SpreadsheetApp.BorderStyle.SOLID_THICK);
-      
-      // Add a note about the separator
-      sheet.getRange(separatorRow - 1, 7).setNote('Payments below this line are older than 3 months and have been moved to the bottom for organization.');
-    }
-    
-    // Color code status column with organized data
-    for (let i = 0; i < organizedData.length; i++) {
-      const statusCell = sheet.getRange(tableStartRow + 1 + i, 7);
-      const status = organizedData[i][6];
-      
-      if (status === 'PAID') {
-        statusCell.setBackground('#C8E6C9').setFontColor('#2E7D32').setFontWeight('bold');
-      } else if (status === 'CURRENT') {
-        statusCell.setBackground('#FFE082').setFontColor('#F57F17').setFontWeight('bold');
-      } else if (status === 'REMAINING') {
-        statusCell.setBackground('#FFCDD2').setFontColor('#D32F2F');
-      }
-      
-      // Highlight current payment row
-      if (status === 'CURRENT') {
-        sheet.getRange(tableStartRow + 1 + i, 1, 1, headers.length)
-          .setBorder(true, true, true, true, false, false, '#FF9800', SpreadsheetApp.BorderStyle.SOLID_THICK);
-      }
-      
-      // Add subtle background for old payments
-      const paymentNum = organizedData[i][0];
-      const paymentDate = new Date(startDateObj.getFullYear(), startDateObj.getMonth() + paymentNum - 1, 1);
-      if (paymentDate < threeMonthsAgo && status === 'PAID') {
-        const rowRange = sheet.getRange(tableStartRow + 1 + i, 1, 1, headers.length);
-        rowRange.setBackground('#F5F5F5'); // Light grey background for old payments
-      }
-    }
-    
-    // Update the current balance in the header
-    sheet.getRange(3, 2).setValue(currentBalance);
-    sheet.getRange(3, 2).setNumberFormat('"$"#,##0.00');
-    
-    // Auto-resize columns
-    sheet.autoResizeColumns(1, headers.length);
-    
-    // Add summary at bottom
-    const summaryRow = tableStartRow + organizedData.length + 2;
-    const totalInterest = scheduleData.reduce((sum, row) => sum + row[4], 0);
-    const totalPaid = monthsPaid * monthlyPayment;
-    const interestPaid = scheduleData.slice(0, monthsPaid).reduce((sum, row) => sum + row[4], 0);
-    
-    sheet.getRange(summaryRow, 1, 5, 2).setValues([
-      ['📊 Summary', ''],
-      ['Total Interest (Full Loan):', Math.round(totalInterest * 100) / 100],
-      ['Payments Made:', `${monthsPaid} of ${totalMonths}`],
-      ['Amount Paid to Date:', Math.round(totalPaid * 100) / 100],
-      ['Interest Paid to Date:', Math.round(interestPaid * 100) / 100]
-    ]);
-    
-    // Format summary
-    sheet.getRange(summaryRow, 1).setBackground('#FF6B35').setFontColor('#FFFFFF').setFontWeight('bold');
-    sheet.getRange(summaryRow + 1, 1, 4, 1).setBackground('#FFA726').setFontColor('#FFFFFF').setFontWeight('bold');
-    sheet.getRange(summaryRow + 1, 2, 4, 1).setNumberFormat('"$"#,##0.00').setFontWeight('bold');
-    
-    SpreadsheetApp.getUi().alert(
-      'Mortgage Amortization Complete!',
-      `Generated amortization table for $${Math.round(originalLoanAmount).toLocaleString()} loan\n` +
-      `Payments Made: ${monthsPaid} of ${totalMonths} (through ${Utilities.formatDate(currentDateObj, Session.getScriptTimeZone(), 'MMM yyyy')})\n` +
-      `Current Balance: $${currentBalance.toLocaleString()}\n` +
-      `Monthly Payment: $${monthlyPayment} (P&I only)\n` +
-      `Next Payment Due: ${Utilities.formatDate(new Date(currentDateObj.getFullYear(), currentDateObj.getMonth() + 1, 1), Session.getScriptTimeZone(), 'MMM yyyy')} (#${monthsPaid + 1})\n\n` +
-      `📋 Note: Recent payments (last 3 months + future) are shown first,\nolder payments are moved to the bottom for better organization.`,
-      SpreadsheetApp.getUi().ButtonSet.OK
-    );
-    
-  } catch (error) {
-    console.error('Mortgage amortization error:', error);
-    SpreadsheetApp.getUi().alert('Error', 'Failed to generate mortgage amortization: ' + error.toString(), SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
-
-/**
- * Update mortgage status with current payment information
- */
-function updateMortgageStatus() {
-  const ui = SpreadsheetApp.getUi();
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Mortgage Amortization');
-  
-  if (!sheet) {
-    ui.alert('No Mortgage Sheet', 'Please generate a mortgage amortization table first.', ui.ButtonSet.OK);
-    return;
-  }
-  
-  const result = ui.prompt(
-    'Update Mortgage Status',
-    'Enter the last month you paid (e.g., "Mar 2026", "April 2026", "05/2026"):',
-    ui.ButtonSet.OK_CANCEL
-  );
-  
-  if (result.getSelectedButton() === ui.Button.OK) {
-    const lastPaidInput = result.getResponseText().trim();
-    
-    // Convert input to standard format
-    let standardizedInput = lastPaidInput;
-    
-    // Handle MM/YYYY format (like "05/2026")
-    const mmyyyyMatch = lastPaidInput.match(/^(\d{1,2})\/(\d{4})$/);
-    if (mmyyyyMatch) {
-      const monthNum = parseInt(mmyyyyMatch[1]);
-      const year = mmyyyyMatch[2];
-      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      if (monthNum >= 1 && monthNum <= 12) {
-        standardizedInput = `${monthNames[monthNum - 1]} ${year}`;
-      }
-    }
-    
-    // Find the data range - starting from row 11 (headers are at row 10)
-    const dataRange = sheet.getDataRange();
-    const allData = dataRange.getValues();
-    
-    // Find the header row (should be row 10, index 9)
-    let headerRowIndex = -1;
-    for (let i = 0; i < allData.length; i++) {
-      if (allData[i][0] === 'Payment #') {
-        headerRowIndex = i;
-        break;
-      }
-    }
-    
-    if (headerRowIndex === -1) {
-      ui.alert('Error', 'Cannot find mortgage payment table.', ui.ButtonSet.OK);
-      return;
-    }
-    
-    // Find the matching payment row
-    let lastPaidRowIndex = -1;
-    const availableDates = []; // For debugging
-    
-    for (let i = headerRowIndex + 1; i < allData.length; i++) {
-      const rowData = allData[i];
-      
-      // Skip empty rows
-      if (!rowData[0] || !rowData[1]) continue;
-      
-      const dateValue = rowData[1]; // Date column
-      let dateStr = '';
-      
-      // Handle both Date objects and string values
-      if (dateValue instanceof Date) {
-        dateStr = Utilities.formatDate(dateValue, Session.getScriptTimeZone(), 'MMM yyyy');
-      } else {
-        dateStr = String(dateValue);
-      }
-      
-      availableDates.push(dateStr); // Collect for debugging
-      
-      // Try exact match first
-      if (dateStr === standardizedInput) {
-        lastPaidRowIndex = i;
-        break;
-      }
-      
-      // Try flexible matching as fallback
-      const inputLower = standardizedInput.toLowerCase().replace(/[^\w]/g, '');
-      const dateLower = dateStr.toLowerCase().replace(/[^\w]/g, '');
-      
-      if (dateLower.includes(inputLower) || inputLower.includes(dateLower)) {
-        lastPaidRowIndex = i;
-        break;
-      }
-    }
-    
-    if (lastPaidRowIndex === -1) {
-      // Show available dates for debugging
-      const first10Dates = availableDates.slice(0, 10).join(', ');
-      const totalDates = availableDates.length;
-      ui.alert('Error', `Cannot find payment for "${lastPaidInput}" (searched as "${standardizedInput}").\n\nFirst 10 available dates: ${first10Dates}\n\nTotal payments found: ${totalDates}\n\nPlease use exact format like "Apr 2026".`, ui.ButtonSet.OK);
-      return;
-    }
-    
-    // Validate the found row has proper data
-    const foundRow = allData[lastPaidRowIndex];
-    const foundPaymentNumber = foundRow[0];
-    const foundDate = foundRow[1];
-    const foundBalance = foundRow[5];
-    
-    if (!foundPaymentNumber || !foundDate || foundBalance === undefined || foundBalance === null) {
-      // Show debug info to understand the data structure
-      const debugInfo = `Row Index: ${lastPaidRowIndex}\nRow Data: [${foundRow.join(', ')}]\nExpected columns: Payment#, Date, Payment, Principal, Interest, Balance, Status`;
-      ui.alert('Debug Info', debugInfo, ui.ButtonSet.OK);
-      return;
-    }
-    
-    // Update all payment statuses
-    let updatesCount = 0;
-    for (let i = headerRowIndex + 1; i < allData.length; i++) {
-      const paymentNumber = allData[i][0];
-      const currentStatus = allData[i][6]; // Status column
-      let newStatus = '';
-      
-      if (paymentNumber <= foundPaymentNumber) {
-        newStatus = 'PAID';
-      } else if (paymentNumber === foundPaymentNumber + 1) {
-        newStatus = 'CURRENT';
-      } else {
-        newStatus = 'REMAINING';
-      }
-      
-      // Update if status changed
-      if (currentStatus !== newStatus) {
-        sheet.getRange(i + 1, 7).setValue(newStatus); // +1 because sheet rows are 1-indexed
-        
-        // Update color coding
-        const statusCell = sheet.getRange(i + 1, 7);
-        if (newStatus === 'PAID') {
-          statusCell.setBackground('#C8E6C9').setFontColor('#2E7D32').setFontWeight('bold');
-        } else if (newStatus === 'CURRENT') {
-          statusCell.setBackground('#FFE082').setFontColor('#F57F17').setFontWeight('bold');
-        } else if (newStatus === 'REMAINING') {
-          statusCell.setBackground('#FFCDD2').setFontColor('#D32F2F').setFontWeight('bold');
-        }
-        updatesCount++;
-      }
-    }
-    
-    // Update the current balance in header based on the last paid row's balance
-    const lastPaidBalance = foundBalance; // Balance column
-    const lastPaidDate = foundDate; // Date column
-    const lastPaidPaymentNum = foundPaymentNumber; // Payment number
-    
-    // Format the date properly for display
-    let displayDate = '';
-    if (lastPaidDate instanceof Date) {
-      displayDate = Utilities.formatDate(lastPaidDate, Session.getScriptTimeZone(), 'MM/yyyy');
-    } else {
-      displayDate = String(lastPaidDate).replace(/[^\w\s]/g, ''); // Remove special chars
-      // Convert "May 2026" to "05/2026" format
-      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                         'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-      const parts = displayDate.split(' ');
-      if (parts.length === 2) {
-        const monthIndex = monthNames.indexOf(parts[0]);
-        if (monthIndex !== -1) {
-          const monthNum = String(monthIndex + 1).padStart(2, '0');
-          displayDate = `${monthNum}/${parts[1]}`;
-        }
-      }
-    }
-    
-    // Update current balance amount (B3)
-    sheet.getRange(3, 2).setValue(lastPaidBalance);
-    
-    // Update current balance description to show new date (A3)
-    sheet.getRange(3, 1).setValue(`Current Balance (after ${displayDate}):`);
-    
-    // Update payments made count (B8)
-    // Calculate total payments from loan parameters instead of hardcoding
-    const currentPaymentsStr = sheet.getRange(8, 2).getValue();
-    let totalPayments = '480'; // fallback
-    
-    // Try to get total from existing data first
-    const existingMatch = String(currentPaymentsStr).match(/\d+\s*\/\s*(\d+)/);
-    if (existingMatch) {
-      totalPayments = existingMatch[1];
-    } else {
-      // Calculate total payments from loan parameters if not available
-      try {
-        const originDate = sheet.getRange('B6').getDisplayValue();
-        const maturityDate = sheet.getRange('B7').getDisplayValue();
-        const [startMonth, startYear] = originDate.split('/');
-        const [endMonth, endYear] = maturityDate.split('/');
-        const startDateObj = new Date(parseInt(startYear), parseInt(startMonth) - 1, 1);
-        const endDateObj = new Date(parseInt(endYear), parseInt(endMonth) - 1, 1);
-        const calculatedTotalMonths = (endDateObj.getFullYear() - startDateObj.getFullYear()) * 12 + 
-                                     (endDateObj.getMonth() - startDateObj.getMonth());
-        totalPayments = String(calculatedTotalMonths);
-      } catch (error) {
-        console.log('Could not calculate total payments, using fallback');
-      }
-    }
-    sheet.getRange(8, 2).setValue(`${lastPaidPaymentNum} / ${totalPayments}`);
-    
-    ui.alert('Updated', 
-      `Mortgage status updated!\n` +
-      `Last paid: ${displayDate.includes('/') ? displayDate : standardizedInput}\n` +
-      `Payments made: ${lastPaidPaymentNum}\n` +
-      `Current balance: $${Number(lastPaidBalance).toLocaleString()}\n` +
-      `Updated ${updatesCount} payment statuses.`, 
-      ui.ButtonSet.OK);
-  }
 }
 
 /**
@@ -1605,7 +812,7 @@ function generateCustomPayoffSchedule(cardName, balance, apr, customPayment, min
   }
   
   // Add interactive timeline for the custom schedule
-  addInteractiveTimeline(sheet, balance, apr, customPayment, timeline.totalMonths, true, cardName); // true for custom schedule
+  addInteractiveTimeline(sheet, balance, apr, customPayment, timeline.totalMonths, true); // true for custom schedule
   
   sheet.autoResizeColumns(1, headers.length);
   sheet.autoResizeColumns(7, 5);
@@ -1669,809 +876,658 @@ function runCustomScenarios(cardName, scenarios) {
 }
 
 /**
- * Google Sheets simple trigger - automatically called when any cell is edited
- * This replaces the need for installable triggers
+ * ===========================================
+ * BILL TRACKING SYSTEM
+ * ===========================================
  */
-function onEdit(e) {
-  // Call our validation logic
-  onValidationChange(e);
-}
 
 /**
- * Handle validation checkbox changes - called when checkboxes in column L are clicked
- * This function updates the Credit Cards sheet when payments are validated
+ * Add a monthly recurring bill
  */
-function onValidationChange(e) {
-  try {
-    console.log('onValidationChange triggered');
-    console.log('Event range:', e.range.getA1Notation());
-    console.log('Event column:', e.range.getColumn());
-    console.log('Event row:', e.range.getRow());
-    console.log('Event value:', e.range.getValue());
-    
-    // Only process changes in column L (validation column)
-    if (e.range.getColumn() !== 12) {
-      console.log('Not column L, ignoring');
-      return; // Column L = 12
-    }
-    
-    const sheet = e.source.getActiveSheet();
-    const sheetName = sheet.getName();
-    console.log('Sheet name:', sheetName);
-    
-    // Only process schedule sheets (containing " Schedule")
-    if (!sheetName.includes(' Schedule')) {
-      console.log('Not a schedule sheet, ignoring');
-      return;
-    }
-    
-    // Extract card name from sheet name (remove " Schedule" and any trailing numbers/timestamps)
-    let cardName = sheetName.replace(' Schedule', '');
-    // Remove custom schedule timestamps like " (Custom 14:30)"
-    cardName = cardName.replace(/\s*\(Custom\s+\d{2}:\d{2}\)/, '').trim();
-    console.log('Extracted card name:', cardName);
-    
-    // Get the checkbox value and row
-    const isChecked = e.range.getValue();
-    const row = e.range.getRow();
-    console.log('Checkbox checked:', isChecked, 'Row:', row);
-    
-    // Only process when checkbox is checked (not unchecked)
-    if (isChecked !== true) {
-      console.log('Checkbox not checked, ignoring');
-      return;
-    }
-    
-    // Get the month number from column G
-    const monthCell = sheet.getRange(row, 7); // Column G
-    const month = monthCell.getValue();
-    console.log('Month from G' + row + ':', month, typeof month);
-    
-    // Get the payment amount from column H
-    const paymentCell = sheet.getRange(row, 8); // Column H
-    const paymentAmount = paymentCell.getValue();
-    console.log('Payment from H' + row + ':', paymentAmount, typeof paymentAmount);
-    
-    // Skip if no valid month or payment amount
-    if (!month || !paymentAmount || month <= 0 || typeof month !== 'number') {
-      console.log('Invalid month or payment amount, skipping');
-      return;
-    }
-    
-    // Update the Credit Cards sheet
-    console.log('About to update Credit Cards sheet for:', cardName, 'month:', month, 'amount:', paymentAmount);
-    updateCreditCardPayment(cardName, month, paymentAmount);
-    
-    // Provide user feedback
-    SpreadsheetApp.getUi().alert(
-      'Payment Validated',
-      `Payment of $${paymentAmount.toFixed(2)} for month ${month} has been recorded for ${cardName} in the Credit Cards sheet.`,
-      SpreadsheetApp.getUi().ButtonSet.OK
-    );
-  } catch (error) {
-    console.error('onValidationChange error:', error);
-    SpreadsheetApp.getUi().alert('Error', 'Validation error: ' + error.toString(), SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
-
-/**
- * Update the Credit Cards sheet with validated payment
- */
-function updateCreditCardPayment(cardName, month, paymentAmount) {
-  try {
-    console.log('updateCreditCardPayment called with:', {cardName, month, paymentAmount});
-    
-    const creditCardsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Credit Cards');
-    
-    if (!creditCardsSheet) {
-      console.error('Credit Cards sheet not found');
-      SpreadsheetApp.getUi().alert('Error', 'Credit Cards sheet not found.', SpreadsheetApp.getUi().ButtonSet.OK);
-      return;
-    }
-    
-    // Find the row for this card - only search in data rows (skip header)
-    const dataRange = creditCardsSheet.getDataRange();
-    const data = dataRange.getValues();
-    console.log('Credit Cards sheet data rows:', data.length);
-    let cardRow = -1;
-    
-    // Start from row 1 (index 1) to skip header row
-    for (let i = 1; i < data.length; i++) {
-      const cellValue = data[i][0];
-      console.log(`Row ${i+1}: Card name in sheet: "${cellValue}", looking for: "${cardName}"`);
-      if (cellValue && cellValue.toString().trim() === cardName.trim()) { // Column A contains card names
-        cardRow = i + 1; // Convert to 1-based row number
-        console.log('Found matching card at row:', cardRow);
-        break;
-      }
-    }
-    
-    if (cardRow === -1) {
-      const availableCards = data.slice(1).map(row => `"${row[0]}"`).filter(name => name !== '""').join(', ');
-      console.error('Card not found. Available cards:', availableCards);
-      SpreadsheetApp.getUi().alert('Error', `Card "${cardName}" not found in Credit Cards sheet. Available cards: ${availableCards}`, SpreadsheetApp.getUi().ButtonSet.OK);
-      return;
-    }
-    
-    // Validate month is within range
-    if (month < 1 || month > 12) {
-      console.error('Month out of range:', month);
-      SpreadsheetApp.getUi().alert('Error', `Month ${month} is beyond the supported range (1-12).`, SpreadsheetApp.getUi().ButtonSet.OK);
-      return;
-    }
-    
-    // Calculate the column for this month (Month 1 = Column I = 9)
-    const monthColumn = 8 + month; // I=9, J=10, K=11, etc.
-    console.log('Updating cell at row:', cardRow, 'column:', monthColumn, '(Month', month + ')');
-    
-    // Get the current value before updating
-    const targetCell = creditCardsSheet.getRange(cardRow, monthColumn);
-    const currentValue = targetCell.getValue();
-    console.log('Current cell value:', currentValue);
-    
-    // Update ONLY the specific cell for this card and month
-    targetCell.setValue(paymentAmount);
-    console.log('Set cell value to:', paymentAmount);
-    
-    // Add formatting to highlight the validated payment
-    targetCell
-      .setBackground('#C8E6C9')  // Light green background
-      .setFontColor('#2E7D32')   // Dark green text
-      .setFontWeight('bold');
-      
-    // Verify the update worked
-    const newValue = targetCell.getValue();
-    console.log('Cell value after update:', newValue);
-    
-    // Final confirmation
-    console.log(`Successfully updated ${cardName} row ${cardRow}, month ${month} (column ${monthColumn}) with payment $${paymentAmount}`);
-    
-  } catch (error) {
-    console.error('updateCreditCardPayment error:', error);
-    SpreadsheetApp.getUi().alert('Error', 'Update error: ' + error.toString(), SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
-
-/**
- * Generate simulation mortgage amortization table (exact copy of main function)
- * Outputs to columns I-N starting at row 10
- */
-function generateSimulationMortgageAmortization(originDate, originalLoanAmount, annualRate, maturityDate, currentPaymentDate, extraPayment = 0, extraPaymentStartMonth = null, threePaycheckAmount = 0, threePaycheckStartMonth = null) {
-  try {
-    console.log('=== Simulation Calculation Function Debug ===');
-    console.log('Received parameters:');
-    console.log('  - originDate:', originDate, 'type:', typeof originDate);
-    console.log('  - originalLoanAmount:', originalLoanAmount, 'type:', typeof originalLoanAmount);
-    console.log('  - annualRate:', annualRate, 'type:', typeof annualRate);
-    console.log('  - maturityDate:', maturityDate, 'type:', typeof maturityDate);
-    console.log('  - currentPaymentDate:', currentPaymentDate, 'type:', typeof currentPaymentDate);
-    
-    // Validate parameters before using split()
-    if (!originDate || typeof originDate !== 'string') {
-      throw new Error(`Invalid originDate: ${originDate} (type: ${typeof originDate})`);
-    }
-    if (!maturityDate || typeof maturityDate !== 'string') {
-      throw new Error(`Invalid maturityDate: ${maturityDate} (type: ${typeof maturityDate})`);
-    }
-    if (!currentPaymentDate || typeof currentPaymentDate !== 'string') {
-      throw new Error(`Invalid currentPaymentDate: ${currentPaymentDate} (type: ${typeof currentPaymentDate})`);
-    }
-    if (!originalLoanAmount || isNaN(originalLoanAmount)) {
-      throw new Error(`Invalid originalLoanAmount: ${originalLoanAmount} (type: ${typeof originalLoanAmount})`);
-    }
-    
-    console.log('All parameters validated successfully');
-    
-    // Parse dates
-    const [startMonth, startYear] = originDate.split('/');
-    const [endMonth, endYear] = maturityDate.split('/');
-    const [currentMonth, currentYear] = currentPaymentDate.split('/');
-    
-    const startDateObj = new Date(parseInt(startYear), parseInt(startMonth) - 1, 1);
-    const endDateObj = new Date(parseInt(endYear), parseInt(endMonth) - 1, 1);
-    const currentDateObj = new Date(parseInt(currentYear), parseInt(currentMonth) - 1, 1);
-    
-    // Calculate months
-    const totalMonths = (endDateObj.getFullYear() - startDateObj.getFullYear()) * 12 + 
-                       (endDateObj.getMonth() - startDateObj.getMonth());
-    const monthsPaid = (currentDateObj.getFullYear() - startDateObj.getFullYear()) * 12 + 
-                      (currentDateObj.getMonth() - startDateObj.getMonth()) + 1;
-    
-    // Calculate monthly payment from original loan amount
-    const monthlyRate = annualRate / 100 / 12;
-    const monthlyPayment = calculateMortgagePayment(originalLoanAmount, annualRate, totalMonths);
-    
-    console.log('=== Calculation Setup ===');
-    console.log('totalMonths:', totalMonths);
-    console.log('monthsPaid:', monthsPaid);
-    console.log('annualRate as percentage:', annualRate, '(should be ~2.75)');
-    console.log('monthlyRate calculation:', annualRate, '/ 100 / 12 =', monthlyRate);
-    console.log('monthlyRate:', monthlyRate, '(should be ~0.00229)');
-    console.log('monthlyPayment:', monthlyPayment, '(should be ~579.48)');
-    console.log('Starting balance (originalLoanAmount):', originalLoanAmount);
-    
-    if (monthlyPayment < 500 || monthlyPayment > 700) {
-      console.log('⚠️ WARNING: Monthly payment looks incorrect! Expected ~$579.48');
-    }
-    if (monthlyRate < 0.002 || monthlyRate > 0.003) {
-      console.log('⚠️ WARNING: Monthly rate looks incorrect! Expected ~0.00229');
-    }
-    
-    // Get existing sheet (don't clear it)
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Mortgage Amortization');
-    
-    // Clear simulation area (columns I through N, starting from row 9)
-    const simStartCol = 9; // Column I
-    const simStartRow = 10;
-    sheet.getRange(9, simStartCol, 500, 6).clearContent().clearFormat();
-    
-    // Create simulation title (at row 9)
-    const titleRange = sheet.getRange(9, simStartCol, 1, 6);
-    titleRange.setValues([['📊 Simulation Table (Exact Copy)', '', '', '', '', '']]);
-    titleRange.setBackground('#FFE0B2').setFontColor('#FF9800').setFontWeight('bold').setFontSize(12);
-    titleRange.merge();
-    
-    // Simulation table headers (at row 10) - include Extra column
-    const headers = ['Payment #', 'Date', 'Payment', 'Principal', 'Interest', 'Balance', 'Extra'];
-    const headerRange = sheet.getRange(simStartRow, simStartCol, 1, headers.length);
-    headerRange.setValues([headers]);
-    headerRange.setBackground('#1976D2').setFontColor('#FFFFFF').setFontWeight('bold');
-    
-    // Add extra payment and 3-paycheck payment logging
-    console.log('=== Extra Payment Parameters ===');
-    console.log('extraPayment:', extraPayment);
-    console.log('extraPaymentStartMonth:', extraPaymentStartMonth);
-    console.log('threePaycheckAmount:', threePaycheckAmount);
-    console.log('threePaycheckStartMonth:', threePaycheckStartMonth);
-    
-    // Parse extra payment start month if provided
-    let extraPaymentStartDate = null;
-    if (extraPaymentStartMonth && extraPayment > 0) {
-      const [extraMonth, extraYear] = extraPaymentStartMonth.split('/');
-      extraPaymentStartDate = new Date(parseInt(extraYear), parseInt(extraMonth) - 1, 1);
-      console.log('Parsed extraPaymentStartDate:', extraPaymentStartDate);
-    }
-    
-    // Parse 3-paycheck start month and get all 3-paycheck months
-    let threePaycheckStartDate = null;
-    let threePaycheckMonths = [];
-    if (threePaycheckStartMonth && threePaycheckAmount > 0) {
-      const [threeMonth, threeYear] = threePaycheckStartMonth.split('/');
-      threePaycheckStartDate = new Date(parseInt(threeYear), parseInt(threeMonth) - 1, 1);
-      
-      // Get all 3-paycheck months for the next 40 years
-      const allThreePaycheckMonths = calculateThreePaycheckMonths(parseInt(threeYear), 40);
-      threePaycheckMonths = allThreePaycheckMonths
-        .filter(month => {
-          const monthDate = new Date(month.year, month.month - 1, 1);
-          return monthDate >= threePaycheckStartDate;
-        })
-        .map(month => month.formatted);
-      
-      console.log('Parsed threePaycheckStartDate:', threePaycheckStartDate);
-      console.log('First 10 eligible 3-paycheck months:', threePaycheckMonths.slice(0, 10));
-    }
-
-    // Generate amortization schedule with extra payments
-    const scheduleData = [];
-    let balance = originalLoanAmount;
-    let currentBalance = 0; // Balance after current payment date
-    
-    console.log('=== Starting Amortization Loop ===');
-    console.log('Initial balance:', balance);
-    
-    for (let i = 1; i <= totalMonths; i++) {
-      const paymentDate = new Date(startDateObj.getFullYear(), startDateObj.getMonth() + i - 1, 1);
-      let interestPayment = balance * monthlyRate;
-      
-      // Calculate base principal payment
-      let principalPayment = monthlyPayment - interestPayment;
-      let totalPaymentAmount = monthlyPayment;
-      
-      // Add extra payment if we're at or past the start date
-      let extraPaymentThisMonth = 0;
-      if (extraPaymentStartDate && paymentDate >= extraPaymentStartDate && balance > 0) {
-        extraPaymentThisMonth = Math.min(extraPayment, balance - principalPayment);
-        if (extraPaymentThisMonth > 0) {
-          principalPayment += extraPaymentThisMonth;
-          totalPaymentAmount += extraPaymentThisMonth;
-        }
-      }
-      
-      // Add 3-paycheck payment if this is a 3-paycheck month
-      let threePaycheckPaymentThisMonth = 0;
-      const currentMonthFormatted = Utilities.formatDate(paymentDate, Session.getScriptTimeZone(), 'MM/yyyy');
-      if (threePaycheckMonths.includes(currentMonthFormatted) && balance > 0) {
-        threePaycheckPaymentThisMonth = Math.min(threePaycheckAmount, balance - principalPayment);
-        if (threePaycheckPaymentThisMonth > 0) {
-          principalPayment += threePaycheckPaymentThisMonth;
-          totalPaymentAmount += threePaycheckPaymentThisMonth;
-        }
-      }
-      
-      // Log first few payments for debugging
-      if (i <= 3) {
-        console.log(`=== Payment ${i} Calculation ===`);
-        console.log('  Payment date:', Utilities.formatDate(paymentDate, Session.getScriptTimeZone(), 'MM/yyyy'));
-        console.log('  Balance before payment:', balance);
-        console.log('  Interest calculation:', balance, '*', monthlyRate, '=', interestPayment);
-        console.log('  Base principal calculation:', monthlyPayment, '-', interestPayment, '=', monthlyPayment - interestPayment);
-        console.log('  Extra payment this month:', extraPaymentThisMonth);
-        console.log('  3-paycheck payment this month:', threePaycheckPaymentThisMonth);
-        console.log('  Total principal payment:', principalPayment);
-        console.log('  Total payment amount:', totalPaymentAmount);
-        
-        // TODO: Add more detailed console.log() for next session:
-        // - Log exact precision of floating point calculations
-        // - Compare each calculation step with main table equivalent
-        // - Add validation that calculations are mathematically correct
-        // - Log intermediate rounding effects and precision loss
-        // - Add boundary condition checks (balance >= 0, payments > 0)
-        // - Log payment date formatting and validation
-        // - Add detailed status determination logic
-        // - Track cumulative errors over multiple payments
-        // - Log memory allocation for large payment arrays  
-        // - Add performance timing for each calculation loop iteration
-      }
-      
-      // Round to cents for precision
-      interestPayment = Math.round(interestPayment * 100) / 100;
-      principalPayment = Math.round(principalPayment * 100) / 100;
-      
-      // Update balance
-      balance = Math.max(0, balance - principalPayment);
-      balance = Math.round(balance * 100) / 100;
-      
-      // Log first few payments after rounding
-      if (i <= 3) {
-        console.log('  After rounding:');
-        console.log('    Interest:', interestPayment);
-        console.log('    Principal:', principalPayment);
-        console.log('    New balance:', balance);
-      }
-      
-      // Capture balance after the current payment date
-      if (i === monthsPaid) {
-        currentBalance = balance;
-      }
-      
-      // Determine status based on current payment date (for organization)
-      let status = '';
-      if (i <= monthsPaid) { // Through current payment date
-        status = 'PAID';
-      } else if (i === monthsPaid + 1) { // Next month after current payment
-        status = 'CURRENT';
-      } else {
-        status = 'REMAINING';
-      }
-      
-      // Check if loan is paid off early due to extra payments
-      if (balance <= 0) {
-        console.log(`Loan paid off early at payment ${i}!`);
-        // Add final payment entry and break
-        const extraInfo = [];
-        if (extraPaymentThisMonth > 0) extraInfo.push(`+$${extraPaymentThisMonth}`);
-        if (threePaycheckPaymentThisMonth > 0) extraInfo.push(`3-pay: +$${threePaycheckPaymentThisMonth}`);
-        
-        scheduleData.push([
-          i,
-          Utilities.formatDate(paymentDate, Session.getScriptTimeZone(), 'MMM yyyy'),
-          totalPaymentAmount,
-          principalPayment,
-          interestPayment,
-          0,
-          extraInfo.join(' ')
-        ]);
-        break;
-      }
-      
-      // Format extra payment info
-      const extraInfo = [];
-      if (extraPaymentThisMonth > 0) extraInfo.push(`+$${extraPaymentThisMonth}`);
-      if (threePaycheckPaymentThisMonth > 0) extraInfo.push(`3-pay: +$${threePaycheckPaymentThisMonth}`);
-      
-      scheduleData.push([
-        i,
-        Utilities.formatDate(paymentDate, Session.getScriptTimeZone(), 'MMM yyyy'),
-        totalPaymentAmount,
-        principalPayment,
-        interestPayment,
-        balance,
-        extraInfo.join(' ')
-      ]);
-    }
-    
-    console.log('=== Amortization Loop Complete ===');
-    console.log('Total schedule entries:', scheduleData.length);
-    if (scheduleData.length > 0) {
-      console.log('First payment entry:', scheduleData[0]);
-      console.log('Second payment entry:', scheduleData[1]);
-      console.log('Third payment entry:', scheduleData[2]);
-    }
-    
-    // Add data to simulation area with old payments moved to bottom (EXACT same logic)
-    const threeMonthsAgo = new Date(currentDateObj.getFullYear(), currentDateObj.getMonth() - 3, 1);
-    
-    // TODO: Add more detailed console.log() for next session:
-    // - Log the three months ago cutoff date calculation
-    // - Track how many payments fall into recent vs old categories
-    // - Validate date comparisons are working correctly
-    // - Log array sizes before and after organization
-    // - Add detailed payment sorting and filtering logic
-    // - Validate no payments are lost during organization
-    // - Log final organized data structure integrity
-    // - Add performance metrics for array processing operations
-    
-    // Separate recent payments (last 3 months + current + future) from old payments
-    const recentPayments = [];
-    const oldPayments = [];
-    
-    scheduleData.forEach(payment => {
-      const paymentNum = payment[0];
-      const paymentDate = new Date(startDateObj.getFullYear(), startDateObj.getMonth() + paymentNum - 1, 1);
-      
-      if (paymentDate >= threeMonthsAgo || payment[6] === 'CURRENT' || payment[6] === 'REMAINING') {
-        recentPayments.push(payment);
-      } else {
-        oldPayments.push(payment);
-      }
-    });
-    
-    // Combine recent payments first, then old payments
-    const organizedData = [...recentPayments, ...oldPayments];
-    
-    // Keep all 7 columns for simulation data (including Extra column)
-    const simulationData = organizedData.map(row => row.slice(0, 7));
-    
-    // Add data to simulation area
-    const dataRange = sheet.getRange(simStartRow + 1, simStartCol, simulationData.length, headers.length);
-    dataRange.setValues(simulationData);
-    
-    console.log('=== Data Written to Sheet ===');
-    console.log('Simulation data rows:', simulationData.length);
-    console.log('Starting at row:', simStartRow + 1, 'column:', simStartCol);
-    console.log('Headers:', headers);
-    if (simulationData.length > 0) {
-      console.log('First row data written:', simulationData[0]);
-    }
-    
-    // Format currency columns (same as main table) - columns 3,4,5,6 (Payment, Principal, Interest, Balance)
-    const currencyColumns = [3, 4, 5, 6]; // Payment, Principal, Interest, Balance (Extra column is text)
-    currencyColumns.forEach(col => {
-      sheet.getRange(simStartRow + 1, simStartCol + col - 1, simulationData.length, 1).setNumberFormat('"$"#,##0.00');
-    });
-    
-    // Add visual separator between recent and old payments
-    if (oldPayments.length > 0) {
-      const separatorRowIndex = recentPayments.length;
-      const separatorRow = simStartRow + 1 + separatorRowIndex;
-      sheet.getRange(separatorRow, simStartCol, 1, headers.length)
-        .setBorder(true, false, false, false, false, false, '#FF9800', SpreadsheetApp.BorderStyle.SOLID_THICK);
-    }
-    
-    // Color coding and highlighting (same as main table)
-    for (let i = 0; i < simulationData.length; i++) {
-      const paymentNum = simulationData[i][0];
-      const paymentDate = new Date(startDateObj.getFullYear(), startDateObj.getMonth() + paymentNum - 1, 1);
-      const rowRange = sheet.getRange(simStartRow + 1 + i, simStartCol, 1, headers.length);
-      
-      // Highlight current payment row
-      if (paymentNum === monthsPaid + 1) {
-        rowRange.setBorder(true, true, true, true, false, false, '#FF9800', SpreadsheetApp.BorderStyle.SOLID_THICK);
-      }
-      
-      // Add subtle background for old payments
-      if (paymentDate < threeMonthsAgo && paymentNum <= monthsPaid) {
-        rowRange.setBackground('#F5F5F5'); // Light grey background for old payments
-      }
-    }
-    
-    // Auto-resize simulation columns
-    for (let col = simStartCol; col < simStartCol + headers.length; col++) {
-      sheet.autoResizeColumn(col);
-    }
-    
-    SpreadsheetApp.getUi().alert(
-      'Simulation Table Created!',
-      'Simulation table generated in columns I-N.\nThis uses the exact same calculation logic as your main amortization table.',
-      SpreadsheetApp.getUi().ButtonSet.OK
-    );
-    
-  } catch (error) {
-    console.error('Simulation error:', error);
-    SpreadsheetApp.getUi().alert('Error', 'Failed to generate simulation: ' + error.toString(), SpreadsheetApp.getUi().ButtonSet.OK);
-  }
-}
-
-/**
- * Wrapper function to call simulation with existing mortgage data
- */
-/**
- * Calculate all months with 3 paychecks for bi-weekly pay schedule
- * Based on the user's pattern: Nov 2026, Jun 2027, Nov 2027, May 2028, etc.
- */
-function calculateThreePaycheckMonths(startYear = 2026, yearsAhead = 40) {
-  const threePaycheckMonths = [];
+function addMonthlyBill() {
+  const ui = SpreadsheetApp.getUi();
   
-  // Starting from November 2026, the pattern roughly follows:
-  // Nov 2026 -> Jun 2027 (+7 months) -> Nov 2027 (+5 months) -> May 2028 (+6 months) -> Nov 2028 (+6 months) -> Apr 2029 (+5 months), etc.
-  // The pattern alternates between 5-7 month gaps due to bi-weekly pay cycle
+  // Get bill name
+  const nameResult = ui.prompt(
+    'Add Monthly Bill',
+    'Enter bill name (e.g., "Electric Bill", "Netflix", "Car Payment"):',
+    ui.ButtonSet.OK_CANCEL
+  );
   
-  let currentMonth = 11; // November
-  let currentYear = 2026;
-  const endYear = startYear + yearsAhead;
+  if (nameResult.getSelectedButton() !== ui.Button.OK) return;
+  const billName = nameResult.getResponseText().trim();
   
-  // The gap pattern for bi-weekly pay with 3-paycheck months
-  const gapPattern = [7, 5, 6, 6, 5, 6, 6, 5, 6, 6, 5]; // Months between 3-paycheck months
-  let gapIndex = 0;
+  // Get amount
+  const amountResult = ui.prompt(
+    'Bill Amount',
+    'Enter monthly amount (e.g., 150.50):',
+    ui.ButtonSet.OK_CANCEL
+  );
   
-  while (currentYear <= endYear) {
-    threePaycheckMonths.push({
-      month: currentMonth,
-      year: currentYear,
-      formatted: `${String(currentMonth).padStart(2, '0')}/${currentYear}`
-    });
-    
-    // Add the next gap to get to the next 3-paycheck month
-    const monthsToAdd = gapPattern[gapIndex % gapPattern.length];
-    currentMonth += monthsToAdd;
-    
-    // Handle year rollover
-    while (currentMonth > 12) {
-      currentMonth -= 12;
-      currentYear++;
-    }
-    
-    gapIndex++;
+  if (amountResult.getSelectedButton() !== ui.Button.OK) return;
+  const amount = parseFloat(amountResult.getResponseText().replace(/[$,]/g, ''));
+  
+  if (isNaN(amount) || amount <= 0) {
+    ui.alert('Error', 'Please enter a valid amount.', ui.ButtonSet.OK);
+    return;
   }
   
-  // Filter to only include months from startYear onward
-  const filteredMonths = threePaycheckMonths
-    .filter(item => item.year >= startYear)
-    .sort((a, b) => (a.year * 12 + a.month) - (b.year * 12 + b.month));
+  // Get due date
+  const dateResult = ui.prompt(
+    'Due Date',
+    'Enter due date (day of month, e.g., 15 for the 15th):',
+    ui.ButtonSet.OK_CANCEL
+  );
   
-  console.log('=== Calculated 3-Paycheck Months ===');
-  console.log('Total months found:', filteredMonths.length);
-  console.log('First 20:', filteredMonths.slice(0, 20).map(m => m.formatted));
+  if (dateResult.getSelectedButton() !== ui.Button.OK) return;
+  const dueDay = parseInt(dateResult.getResponseText());
   
-  return filteredMonths;
+  if (isNaN(dueDay) || dueDay < 1 || dueDay > 31) {
+    ui.alert('Error', 'Please enter a valid day (1-31).', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Add to Bills sheet
+  const sheet = getOrCreateBillsSheet();
+  addBillToSheet(sheet, {
+    name: billName,
+    amount: amount,
+    type: 'Monthly',
+    dueDay: dueDay,
+    cycle: 'Monthly',
+    startDate: new Date(),
+    endDate: null,
+    totalPayments: null
+  });
+  
+  ui.alert('Success', `Added monthly bill: ${billName} - $${amount.toFixed(2)} due on the ${dueDay}${getOrdinalSuffix(dueDay)}`, ui.ButtonSet.OK);
 }
 
-function generateExtraPaymentSimulation() {
-  try {
-    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Mortgage Amortization');
-    if (!sheet) {
-      SpreadsheetApp.getUi().alert('Error', 'No mortgage amortization sheet found. Please generate one first.', SpreadsheetApp.getUi().ButtonSet.OK);
-      return;
-    }
+/**
+ * Add a 28-day cycle bill
+ */
+function add28DayBill() {
+  const ui = SpreadsheetApp.getUi();
+  
+  // Get bill name
+  const nameResult = ui.prompt(
+    'Add 28-Day Bill',
+    'Enter bill name (e.g., "Phone Bill", "Online Service"):',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (nameResult.getSelectedButton() !== ui.Button.OK) return;
+  const billName = nameResult.getResponseText().trim();
+  
+  // Get amount
+  const amountResult = ui.prompt(
+    'Bill Amount',
+    'Enter amount per cycle:',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (amountResult.getSelectedButton() !== ui.Button.OK) return;
+  const amount = parseFloat(amountResult.getResponseText().replace(/[$,]/g, ''));
+  
+  if (isNaN(amount) || amount <= 0) {
+    ui.alert('Error', 'Please enter a valid amount.', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Get start date
+  const dateResult = ui.prompt(
+    'Next Due Date',
+    'Enter next due date (MM/DD/YYYY):',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (dateResult.getSelectedButton() !== ui.Button.OK) return;
+  const startDate = new Date(dateResult.getResponseText());
+  
+  if (isNaN(startDate.getTime())) {
+    ui.alert('Error', 'Please enter a valid date in MM/DD/YYYY format.', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Add to Bills sheet
+  const sheet = getOrCreateBillsSheet();
+  addBillToSheet(sheet, {
+    name: billName,
+    amount: amount,
+    type: '28-Day Cycle',
+    dueDay: null,
+    cycle: '28 Days',
+    startDate: startDate,
+    endDate: null,
+    totalPayments: null
+  });
+  
+  ui.alert('Success', `Added 28-day bill: ${billName} - $${amount.toFixed(2)} every 28 days starting ${startDate.toLocaleDateString()}`, ui.ButtonSet.OK);
+}
 
-    const ui = SpreadsheetApp.getUi();
+/**
+ * Add a limited duration bill (like Affirm payments)
+ */
+function addLimitedBill() {
+  const ui = SpreadsheetApp.getUi();
+  
+  // Get bill name
+  const nameResult = ui.prompt(
+    'Add Limited Duration Bill',
+    'Enter bill name (e.g., "Affirm Payment", "Loan Payment"):',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (nameResult.getSelectedButton() !== ui.Button.OK) return;
+  const billName = nameResult.getResponseText().trim();
+  
+  // Get amount
+  const amountResult = ui.prompt(
+    'Bill Amount',
+    'Enter monthly amount:',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (amountResult.getSelectedButton() !== ui.Button.OK) return;
+  const amount = parseFloat(amountResult.getResponseText().replace(/[$,]/g, ''));
+  
+  if (isNaN(amount) || amount <= 0) {
+    ui.alert('Error', 'Please enter a valid amount.', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Get first payment date
+  const firstPaymentResult = ui.prompt(
+    'First Payment Date',
+    'Enter the date of the first payment (MM/DD/YYYY):',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (firstPaymentResult.getSelectedButton() !== ui.Button.OK) return;
+  const firstPaymentDate = new Date(firstPaymentResult.getResponseText());
+  
+  if (isNaN(firstPaymentDate.getTime())) {
+    ui.alert('Error', 'Please enter a valid date in MM/DD/YYYY format.', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Get due day from the first payment date
+  const dueDay = firstPaymentDate.getDate();
+  
+  // Get total payments
+  const paymentsResult = ui.prompt(
+    'Total Payments',
+    'Enter total number of payments (e.g., 12, 24, 36):',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (paymentsResult.getSelectedButton() !== ui.Button.OK) return;
+  const totalPayments = parseInt(paymentsResult.getResponseText());
+  
+  if (isNaN(totalPayments) || totalPayments <= 0) {
+    ui.alert('Error', 'Please enter a valid number of payments.', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Calculate end date based on first payment date and total payments
+  const endDate = new Date(firstPaymentDate.getFullYear(), firstPaymentDate.getMonth() + totalPayments, dueDay);
+  
+  // Calculate how many payments have been made (assume account is up to date)
+  const today = new Date();
+  let paymentsMade = 0;
+  
+  if (today >= firstPaymentDate) {
+    // Calculate number of months between first payment and today
+    const monthsDiff = (today.getFullYear() - firstPaymentDate.getFullYear()) * 12 + 
+                      (today.getMonth() - firstPaymentDate.getMonth());
     
-    // Prompt for extra payment amount
-    const extraPaymentResult = ui.prompt(
-      'Extra Payment Simulation',
-      'Enter the extra monthly payment amount (e.g., 100, 200, 500):',
-      ui.ButtonSet.OK_CANCEL
-    );
-    
-    if (extraPaymentResult.getSelectedButton() !== ui.Button.OK) {
-      return;
-    }
-    
-    const extraPaymentInput = extraPaymentResult.getResponseText().trim();
-    const extraPayment = parseFloat(extraPaymentInput.replace(/[$,]/g, ''));
-    
-    if (!extraPayment || isNaN(extraPayment) || extraPayment <= 0) {
-      ui.alert('Error', `Invalid extra payment amount: "${extraPaymentInput}". Please enter a positive number.`, ui.ButtonSet.OK);
-      return;
-    }
-    
-    // Prompt for starting month
-    const startMonthResult = ui.prompt(
-      'Starting Month',
-      'Enter the month to start extra payments (MM/YYYY format):\n\nExamples: 06/2026, 12/2026, 01/2027',
-      ui.ButtonSet.OK_CANCEL
-    );
-    
-    if (startMonthResult.getSelectedButton() !== ui.Button.OK) {
-      return;
-    }
-    
-    const startMonthInput = startMonthResult.getResponseText().trim();
-    
-    // Validate MM/YYYY format
-    const monthYearMatch = startMonthInput.match(/^(\d{1,2})\/(\d{4})$/);
-    if (!monthYearMatch) {
-      ui.alert('Error', `Invalid date format: "${startMonthInput}". Please use MM/YYYY format (e.g., 06/2026).`, ui.ButtonSet.OK);
-      return;
-    }
-    
-    const startMonth = parseInt(monthYearMatch[1]);
-    const startYear = parseInt(monthYearMatch[2]);
-    
-    if (startMonth < 1 || startMonth > 12) {
-      ui.alert('Error', `Invalid month: "${startMonth}". Please enter a month between 1-12.`, ui.ButtonSet.OK);
-      return;
-    }
-    
-    const startMonthFormatted = `${String(startMonth).padStart(2, '0')}/${startYear}`;
-    
-    console.log('=== Extra Payment Simulation Input ===');
-    console.log('Extra payment amount:', extraPayment);
-    console.log('Starting month input:', startMonthInput);
-    console.log('Formatted starting month:', startMonthFormatted);
-    
-    // Prompt for 3-paycheck month large payments
-    const threePaycheckResult = ui.prompt(
-      'Three-Paycheck Months',
-      'Do you want to make large principal payments on months with 3 paychecks?\n\n(You get 3 paychecks roughly every 6 months)\n\nEnter "yes" or "no":',
-      ui.ButtonSet.OK_CANCEL
-    );
-    
-    if (threePaycheckResult.getSelectedButton() !== ui.Button.OK) {
-      return;
-    }
-    
-    let threePaycheckAmount = 0;
-    let threePaycheckStartMonth = null;
-    const enableThreePaycheck = threePaycheckResult.getResponseText().trim().toLowerCase() === 'yes';
-    
-    if (enableThreePaycheck) {
-      // Prompt for 3-paycheck payment amount
-      const threePaycheckAmountResult = ui.prompt(
-        'Three-Paycheck Payment Amount',
-        'Enter the large payment amount for 3-paycheck months (e.g., 1000, 1500, 2000):',
-        ui.ButtonSet.OK_CANCEL
-      );
-      
-      if (threePaycheckAmountResult.getSelectedButton() !== ui.Button.OK) {
-        return;
-      }
-      
-      const threePaycheckAmountInput = threePaycheckAmountResult.getResponseText().trim();
-      threePaycheckAmount = parseFloat(threePaycheckAmountInput.replace(/[$,]/g, ''));
-      
-      if (!threePaycheckAmount || isNaN(threePaycheckAmount) || threePaycheckAmount <= 0) {
-        ui.alert('Error', `Invalid 3-paycheck payment amount: "${threePaycheckAmountInput}". Please enter a positive number.`, ui.ButtonSet.OK);
-        return;
-      }
-      
-      // Prompt for 3-paycheck starting month
-      const threePaycheckStartResult = ui.prompt(
-        'Three-Paycheck Starting Month',
-        'Enter the month to start 3-paycheck payments (MM/YYYY format):\n\nNext 3-paycheck months: 11/2026, 06/2027, 11/2027, 05/2028...',
-        ui.ButtonSet.OK_CANCEL
-      );
-      
-      if (threePaycheckStartResult.getSelectedButton() !== ui.Button.OK) {
-        return;
-      }
-      
-      const threePaycheckStartInput = threePaycheckStartResult.getResponseText().trim();
-      
-      // Validate MM/YYYY format
-      const threePaycheckMonthMatch = threePaycheckStartInput.match(/^(\d{1,2})\/(\d{4})$/);
-      if (!threePaycheckMonthMatch) {
-        ui.alert('Error', `Invalid date format: "${threePaycheckStartInput}". Please use MM/YYYY format (e.g., 11/2026).`, ui.ButtonSet.OK);
-        return;
-      }
-      
-      const threePaycheckStartMonthNum = parseInt(threePaycheckMonthMatch[1]);
-      const threePaycheckStartYear = parseInt(threePaycheckMonthMatch[2]);
-      
-      if (threePaycheckStartMonthNum < 1 || threePaycheckStartMonthNum > 12) {
-        ui.alert('Error', `Invalid month: "${threePaycheckStartMonthNum}". Please enter a month between 1-12.`, ui.ButtonSet.OK);
-        return;
-      }
-      
-      threePaycheckStartMonth = `${String(threePaycheckStartMonthNum).padStart(2, '0')}/${threePaycheckStartYear}`;
-    }
-    
-    console.log('=== Three-Paycheck Payment Input ===');
-    console.log('Enable 3-paycheck payments:', enableThreePaycheck);
-    console.log('3-paycheck payment amount:', threePaycheckAmount);
-    console.log('3-paycheck starting month:', threePaycheckStartMonth);
-    
-    // Read parameters from existing sheet headers (same as main function uses)
-    const originDate = sheet.getRange('B6').getDisplayValue();
-    const originalLoanAmount = parseFloat(String(sheet.getRange('B2').getValue()).replace(/[$,]/g, ''));
-    
-    // Handle annualRate - cell B4 might contain decimal (0.0275) or percentage (2.75%)
-    const rateValue = sheet.getRange('B4').getValue();
-    let annualRate;
-    if (typeof rateValue === 'string' && rateValue.includes('%')) {
-      // If it's a string like "2.75%", parse and keep as percentage
-      annualRate = parseFloat(rateValue.replace('%', ''));
+    // If we're past the due day this month, count this month's payment
+    if (today.getDate() >= dueDay) {
+      paymentsMade = Math.min(monthsDiff + 1, totalPayments);
     } else {
-      // If it's already a decimal like 0.0275, convert to percentage
-      const rateNum = parseFloat(String(rateValue).replace('%', ''));
-      annualRate = rateNum < 1 ? rateNum * 100 : rateNum; // Convert 0.0275 to 2.75
+      paymentsMade = Math.min(monthsDiff, totalPayments);
     }
-    
-    const maturityDate = sheet.getRange('B7').getDisplayValue();
-    
-    console.log('=== Simulation Wrapper Function Debug ===');
-    console.log('Reading originalLoanAmount from cell B2:', sheet.getRange('B2').getValue());
-    console.log('Parsed originalLoanAmount:', originalLoanAmount);
-    console.log('Reading rate from cell B4:', sheet.getRange('B4').getValue());
-    console.log('Converted annualRate:', annualRate, '(should be ~2.75)');
-    console.log('originDate:', originDate);
-    console.log('maturityDate:', maturityDate);
-    
-    // Validate parameters before proceeding
-    if (!originDate || typeof originDate !== 'string' || !originDate.includes('/')) {
-      throw new Error(`Invalid originDate from cell B6: "${originDate}" (type: ${typeof originDate})`);
-    }
-    if (!maturityDate || typeof maturityDate !== 'string' || !maturityDate.includes('/')) {
-      throw new Error(`Invalid maturityDate from cell B7: "${maturityDate}" (type: ${typeof maturityDate})`);
-    }
-    if (!originalLoanAmount || isNaN(originalLoanAmount) || originalLoanAmount <= 0) {
-      throw new Error(`Invalid originalLoanAmount from cell B2: "${originalLoanAmount}" (type: ${typeof originalLoanAmount})`);
-    }
-    if (!annualRate || isNaN(annualRate) || annualRate <= 0) {
-      throw new Error(`Invalid annualRate from cell B4: "${annualRate}" (type: ${typeof annualRate})`);
-    }
-    
-    console.log('All sheet parameters validated successfully');
-    
-    // TODO: Add more detailed console.log() for next session:
-    // - Validate cell B2 contains expected numeric data and log data type
-    // - Check for any parsing errors in date formats with try/catch
-    // - Log intermediate calculation steps for payment date derivation
-    // - Add validation checks for all input parameters (null/undefined/NaN)
-    // - Log the exact cell values before any string manipulation
-    // - Add error handling with detailed logging for edge cases
-    // - Compare input values with main table's actual calculated values
-    // - Add timestamps and execution timing measurements
-    // - Log memory usage and performance metrics
-    // - Add detailed mathematical validation of each calculation step
-    // - Log array lengths and data structures throughout processing
-    // - Add checkpoints to verify data integrity at each transformation
-    
-    // Extract current payment date from "Payments Made / Total" format
-    const currentPaymentStr = sheet.getRange('B8').getDisplayValue();
-    
-    console.log('currentPaymentStr from B8:', currentPaymentStr, 'type:', typeof currentPaymentStr);
-    
-    // Parse the current payment date from the payments made count
-    let currentPaymentDate = '03/2026'; // fallback
-    const paymentsMatch = String(currentPaymentStr).match(/(\d+)\s*\/\s*(\d+)/);
-    if (paymentsMatch) {
-      const paymentsMade = parseInt(paymentsMatch[1]);
-      console.log('Payments made from B8:', paymentsMade);
-      
-      // Calculate current payment date from origin date + payments made
-      const [originMonth, originYear] = originDate.split('/');
-      const originDateObj = new Date(parseInt(originYear), parseInt(originMonth) - 1, 1);
-      const currentDateObj = new Date(originDateObj.getFullYear(), originDateObj.getMonth() + paymentsMade - 1, 1);
-      const currentMonth = String(currentDateObj.getMonth() + 1).padStart(2, '0');
-      const currentYear = currentDateObj.getFullYear();
-      currentPaymentDate = `${currentMonth}/${currentYear}`;
-    }
-    
-    console.log('Calculated currentPaymentDate:', currentPaymentDate);
-    
-    // Final validation before calling simulation function
-    if (!currentPaymentDate || typeof currentPaymentDate !== 'string' || !currentPaymentDate.includes('/')) {
-      throw new Error(`Invalid currentPaymentDate calculated: "${currentPaymentDate}"`);
-    }
-    console.log('About to call generateSimulationMortgageAmortization with:');
-    console.log('  - originDate:', originDate);
-    console.log('  - originalLoanAmount:', originalLoanAmount);
-    console.log('  - annualRate:', annualRate);
-    console.log('  - maturityDate:', maturityDate);
-    console.log('  - currentPaymentDate:', currentPaymentDate);
-    console.log('  - extraPayment:', extraPayment);
-    console.log('  - extraPaymentStartMonth:', startMonthFormatted);
-    console.log('  - threePaycheckAmount:', threePaycheckAmount);
-    console.log('  - threePaycheckStartMonth:', threePaycheckStartMonth);
-    
-    // Call the full simulation function with extra payment parameters
-    generateSimulationMortgageAmortization(originDate, originalLoanAmount, annualRate, maturityDate, currentPaymentDate, 
-                                          extraPayment, startMonthFormatted, threePaycheckAmount, threePaycheckStartMonth);
-    
-  } catch (error) {
-    console.error('Wrapper error:', error);
-    SpreadsheetApp.getUi().alert('Error', 'Failed to generate simulation: ' + error.toString(), SpreadsheetApp.getUi().ButtonSet.OK);
   }
+  
+  // Format as "x/y" string
+  const paymentProgress = `${paymentsMade}/${totalPayments}`;
+  
+  // Add to Bills sheet
+  const sheet = getOrCreateBillsSheet();
+  addBillToSheet(sheet, {
+    name: billName,
+    amount: amount,
+    type: 'Limited Duration',
+    dueDay: dueDay,
+    cycle: 'Monthly',
+    startDate: firstPaymentDate,
+    endDate: endDate,
+    totalPayments: paymentProgress // Pass as string format
+  });
+  
+  ui.alert('Success', `Added limited bill: ${billName} - $${amount.toFixed(2)} due on the ${dueDay}${getOrdinalSuffix(dueDay)} for ${totalPayments} payments (${paymentsMade} made so far)`, ui.ButtonSet.OK);
+}
+
+/**
+ * Add bi-weekly income tracking
+ */
+function addBiWeeklyIncome() {
+  const ui = SpreadsheetApp.getUi();
+  
+  // Get pay amount
+  const amountResult = ui.prompt(
+    'Bi-Weekly Take Home Pay',
+    'Enter take-home amount per paycheck:',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (amountResult.getSelectedButton() !== ui.Button.OK) return;
+  const amount = parseFloat(amountResult.getResponseText().replace(/[$,]/g, ''));
+  
+  if (isNaN(amount) || amount <= 0) {
+    ui.alert('Error', 'Please enter a valid amount.', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Get next pay date
+  const dateResult = ui.prompt(
+    'Next Pay Date',
+    'Enter next pay date (MM/DD/YYYY):',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (dateResult.getSelectedButton() !== ui.Button.OK) return;
+  const nextPayDate = new Date(dateResult.getResponseText());
+  
+  if (isNaN(nextPayDate.getTime())) {
+    ui.alert('Error', 'Please enter a valid date in MM/DD/YYYY format.', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Add to Income sheet
+  const sheet = getOrCreateIncomeSheet();
+  addIncomeToSheet(sheet, {
+    type: 'Bi-Weekly Pay',
+    amount: amount,
+    frequency: 'Bi-Weekly',
+    nextDate: nextPayDate
+  });
+  
+  ui.alert('Success', `Added bi-weekly income: $${amount.toFixed(2)} every 2 weeks starting ${nextPayDate.toLocaleDateString()}`, ui.ButtonSet.OK);
+}
+
+/**
+ * Get or create Bills sheet
+ */
+function getOrCreateBillsSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Bills');
+  
+  if (!sheet) {
+    sheet = ss.insertSheet('Bills');
+    
+    // Add headers
+    const headers = ['Bill Name', 'Amount', 'Type', 'Due Day', 'Cycle', 'Start Date', 'End Date', 'Total Payments', 'Status'];
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    
+    // Format headers
+    const headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setBackground('#2E7D32')
+      .setFontColor('#FFFFFF')
+      .setFontWeight('bold')
+      .setFontSize(11);
+    
+    sheet.autoResizeColumns(1, headers.length);
+  }
+  
+  return sheet;
+}
+
+/**
+ * Get or create Income sheet
+ */
+function getOrCreateIncomeSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Income');
+  
+  if (!sheet) {
+    sheet = ss.insertSheet('Income');
+    
+    // Add headers
+    const headers = ['Income Type', 'Amount', 'Frequency', 'Next Date', 'Monthly Estimate'];
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    
+    // Format headers
+    const headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setBackground('#1565C0')
+      .setFontColor('#FFFFFF')
+      .setFontWeight('bold')
+      .setFontSize(11);
+    
+    sheet.autoResizeColumns(1, headers.length);
+  }
+  
+  return sheet;
+}
+
+/**
+ * Add bill to sheet
+ */
+function addBillToSheet(sheet, bill) {
+  const row = [
+    bill.name,
+    bill.amount,
+    bill.type,
+    bill.dueDay || '',
+    bill.cycle,
+    bill.startDate,
+    bill.endDate || '',
+    bill.totalPayments || '',
+    'Active'
+  ];
+  
+  sheet.appendRow(row);
+  
+  // Format the amount column
+  const lastRow = sheet.getLastRow();
+  sheet.getRange(lastRow, 2).setNumberFormat('"$"#,##0.00');
+  
+  // Format date columns
+  if (bill.startDate) {
+    sheet.getRange(lastRow, 6).setNumberFormat('MM/DD/YYYY');
+  }
+  if (bill.endDate) {
+    sheet.getRange(lastRow, 7).setNumberFormat('MM/DD/YYYY');
+  }
+  
+  // Format Total Payments column as text to prevent fraction interpretation
+  if (bill.totalPayments && typeof bill.totalPayments === 'string' && bill.totalPayments.includes('/')) {
+    sheet.getRange(lastRow, 8).setNumberFormat('@'); // @ symbol formats as text
+  }
+}
+
+/**
+ * Add income to sheet
+ */
+function addIncomeToSheet(sheet, income) {
+  // Calculate monthly estimate for bi-weekly pay (26 pay periods / 12 months)
+  const monthlyEstimate = income.frequency === 'Bi-Weekly' ? (income.amount * 26) / 12 : income.amount;
+  
+  const row = [
+    income.type,
+    income.amount,
+    income.frequency,
+    income.nextDate,
+    monthlyEstimate
+  ];
+  
+  sheet.appendRow(row);
+  
+  // Format currency columns
+  const lastRow = sheet.getLastRow();
+  sheet.getRange(lastRow, 2).setNumberFormat('"$"#,##0.00'); // Amount
+  sheet.getRange(lastRow, 5).setNumberFormat('"$"#,##0.00'); // Monthly estimate
+  
+  // Format date column
+  sheet.getRange(lastRow, 4).setNumberFormat('MM/DD/YYYY');
+}
+
+/**
+ * Helper function to get ordinal suffix
+ */
+function getOrdinalSuffix(day) {
+  if (day >= 11 && day <= 13) {
+    return 'th';
+  }
+  switch (day % 10) {
+    case 1: return 'st';
+    case 2: return 'nd';
+    case 3: return 'rd';
+    default: return 'th';
+  }
+}
+
+/**
+ * Show bill schedule for the next few months
+ */
+function showBillSchedule() {
+  const billsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Bills');
+  const incomeSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Income');
+  
+  if (!billsSheet && !incomeSheet) {
+    SpreadsheetApp.getUi().alert('No Data', 'Please add some bills and income first.', SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
+  
+  // Create or get schedule sheet
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let scheduleSheet = ss.getSheetByName('Bill Schedule');
+  
+  if (!scheduleSheet) {
+    scheduleSheet = ss.insertSheet('Bill Schedule');
+  } else {
+    scheduleSheet.clear();
+  }
+  
+  // Generate schedule for next 6 months
+  const today = new Date();
+  const scheduleData = [];
+  
+  // Add header
+  scheduleSheet.getRange(1, 1, 1, 4).setValues([['📅 BILL SCHEDULE - Next 6 Months', '', '', '']]);
+  scheduleSheet.getRange(1, 1, 1, 4).merge().setBackground('#FF9800').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(14);
+  
+  const headers = ['Date', 'Item', 'Type', 'Amount'];
+  scheduleSheet.getRange(3, 1, 1, headers.length).setValues([headers]);
+  scheduleSheet.getRange(3, 1, 1, headers.length)
+    .setBackground('#455A64')
+    .setFontColor('#FFFFFF')
+    .setFontWeight('bold');
+  
+  // Process bills
+  if (billsSheet && billsSheet.getLastRow() > 1) {
+    const billData = billsSheet.getDataRange().getValues();
+    
+    for (let i = 1; i < billData.length; i++) {
+      const bill = billData[i];
+      const billName = bill[0];
+      const amount = bill[1];
+      const type = bill[2];
+      const dueDay = bill[3];
+      const cycle = bill[4];
+      const startDate = bill[5];
+      const endDate = bill[6];
+      const status = bill[8];
+      
+      if (status !== 'Active') continue;
+      
+      // Generate dates for next 6 months
+      for (let month = 0; month < 6; month++) {
+        const targetDate = new Date(today.getFullYear(), today.getMonth() + month, 1);
+        let billDate;
+        
+        if (cycle === 'Monthly') {
+          billDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), dueDay);
+        } else if (cycle === '28 Days') {
+          // Calculate 28-day cycles from start date
+          const daysSinceStart = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+          const cyclesSinceStart = Math.floor(daysSinceStart / 28);
+          billDate = new Date(startDate.getTime() + (cyclesSinceStart + month) * 28 * 24 * 60 * 60 * 1000);
+        }
+        
+        if (billDate && billDate >= today) {
+          // Check if this bill is still active (for limited duration bills)
+          if (!endDate || billDate <= endDate) {
+            scheduleData.push([
+              billDate,
+              billName,
+              `Bill - ${type}`,
+              amount
+            ]);
+          }
+        }
+      }
+    }
+  }
+  
+  // Process income (paychecks)
+  if (incomeSheet && incomeSheet.getLastRow() > 1) {
+    const incomeData = incomeSheet.getDataRange().getValues();
+    
+    for (let i = 1; i < incomeData.length; i++) {
+      const income = incomeData[i];
+      const incomeType = income[0];
+      const amount = income[1];
+      const frequency = income[2];
+      const nextDate = income[3];
+      
+      if (frequency === 'Bi-Weekly') {
+        // Generate bi-weekly paychecks for next 6 months
+        let payDate = new Date(nextDate);
+        const endScheduleDate = new Date(today.getFullYear(), today.getMonth() + 6, 1);
+        
+        while (payDate <= endScheduleDate) {
+          if (payDate >= today) {
+            scheduleData.push([
+              payDate,
+              incomeType,
+              'Income',
+              amount
+            ]);
+          }
+          payDate = new Date(payDate.getTime() + 14 * 24 * 60 * 60 * 1000); // Add 14 days
+        }
+      }
+    }
+  }
+  
+  // Sort by date
+  scheduleData.sort((a, b) => a[0] - b[0]);
+  
+  // Write data to sheet
+  if (scheduleData.length > 0) {
+    const dataRange = scheduleSheet.getRange(4, 1, scheduleData.length, 4);
+    dataRange.setValues(scheduleData);
+    
+    // Format dates
+    scheduleSheet.getRange(4, 1, scheduleData.length, 1).setNumberFormat('MM/DD/YYYY');
+    
+    // Format amounts
+    scheduleSheet.getRange(4, 4, scheduleData.length, 1).setNumberFormat('"$"#,##0.00');
+    
+    // Color code rows
+    for (let i = 0; i < scheduleData.length; i++) {
+      const rowRange = scheduleSheet.getRange(4 + i, 1, 1, 4);
+      const itemType = scheduleData[i][2];
+      
+      if (itemType === 'Income') {
+        rowRange.setBackground('#E8F5E8'); // Light green for income
+      } else if (itemType.includes('Bill')) {
+        rowRange.setBackground('#FFF3E0'); // Light orange for bills
+      }
+    }
+  }
+  
+  scheduleSheet.autoResizeColumns(1, 4);
+  SpreadsheetApp.getUi().alert('Success', 'Bill schedule generated! Check the "Bill Schedule" tab.', SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/**
+ * Show budget summary
+ */
+function showBudgetSummary() {
+  const billsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Bills');
+  const incomeSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Income');
+  
+  if (!billsSheet && !incomeSheet) {
+    SpreadsheetApp.getUi().alert('No Data', 'Please add some bills and income first.', SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
+  
+  // Create or get budget sheet
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let budgetSheet = ss.getSheetByName('Budget Summary');
+  
+  if (!budgetSheet) {
+    budgetSheet = ss.insertSheet('Budget Summary');
+  } else {
+    budgetSheet.clear();
+  }
+  
+  // Calculate totals
+  let totalMonthlyIncome = 0;
+  let totalMonthlyBills = 0;
+  let total28DayBills = 0;
+  
+  // Process income
+  if (incomeSheet && incomeSheet.getLastRow() > 1) {
+    const incomeData = incomeSheet.getDataRange().getValues();
+    for (let i = 1; i < incomeData.length; i++) {
+      totalMonthlyIncome += incomeData[i][4]; // Monthly estimate column
+    }
+  }
+  
+  // Process bills
+  if (billsSheet && billsSheet.getLastRow() > 1) {
+    const billData = billsSheet.getDataRange().getValues();
+    for (let i = 1; i < billData.length; i++) {
+      const amount = billData[i][1];
+      const cycle = billData[i][4];
+      const status = billData[i][8];
+      
+      if (status === 'Active') {
+        if (cycle === 'Monthly') {
+          totalMonthlyBills += amount;
+        } else if (cycle === '28 Days') {
+          total28DayBills += amount;
+        }
+      }
+    }
+  }
+  
+  // Approximate 28-day bills as monthly (28-day cycle ≈ 13 payments per year)
+  const estimated28DayMonthly = total28DayBills * 13 / 12;
+  const totalEstimatedMonthlyExpenses = totalMonthlyBills + estimated28DayMonthly;
+  const netMonthlyFlow = totalMonthlyIncome - totalEstimatedMonthlyExpenses;
+  
+  // Create budget summary
+  const summaryData = [
+    ['💰 MONTHLY BUDGET SUMMARY', ''],
+    ['', ''],
+    ['📈 INCOME', ''],
+    ['Monthly Income (Est.):', totalMonthlyIncome],
+    ['', ''],
+    ['📊 EXPENSES', ''],
+    ['Monthly Bills:', totalMonthlyBills],
+    ['28-Day Bills (Est. Monthly):', estimated28DayMonthly],
+    ['Total Monthly Expenses:', totalEstimatedMonthlyExpenses],
+    ['', ''],
+    ['💡 NET CASH FLOW', ''],
+    ['Available per Month:', netMonthlyFlow]
+  ];
+  
+  budgetSheet.getRange(1, 1, summaryData.length, 2).setValues(summaryData);
+  
+  // Format the summary
+  budgetSheet.getRange(1, 1, 1, 2).merge().setBackground('#4CAF50').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(14);
+  budgetSheet.getRange(3, 1).setBackground('#2196F3').setFontColor('#FFFFFF').setFontWeight('bold');
+  budgetSheet.getRange(6, 1).setBackground('#FF9800').setFontColor('#FFFFFF').setFontWeight('bold');
+  budgetSheet.getRange(11, 1).setBackground('#9C27B0').setFontColor('#FFFFFF').setFontWeight('bold');
+  
+  // Color code the net flow
+  const netFlowCell = budgetSheet.getRange(12, 2);
+  if (netMonthlyFlow > 0) {
+    netFlowCell.setBackground('#C8E6C9').setFontColor('#2E7D32').setFontWeight('bold');
+  } else {
+    netFlowCell.setBackground('#FFCDD2').setFontColor('#C62828').setFontWeight('bold');
+  }
+  
+  // Format currency columns
+  const currencyRows = [4, 7, 8, 9, 12];
+  currencyRows.forEach(row => {
+    budgetSheet.getRange(row, 2).setNumberFormat('"$"#,##0.00');
+  });
+  
+  budgetSheet.autoResizeColumns(1, 2);
+  SpreadsheetApp.getUi().alert('Success', 'Budget summary generated! Check the "Budget Summary" tab.', SpreadsheetApp.getUi().ButtonSet.OK);
 }

@@ -14,6 +14,18 @@ function onOpen() {
     .addItem('Open Payment Planner', 'showSidebar')
     .addItem('Calculate Payment Amount', 'showPaymentCalculator')
     .addItem('Clear All Data', 'clearAllData')
+    .addSeparator()
+    .addSubMenu(ui.createMenu('📋 Bill Tracker')
+      .addItem('💳 Add Monthly Bill', 'addMonthlyBill')
+      .addItem('🔄 Add 28-Day Bill', 'add28DayBill') 
+      .addItem('⏳ Add Limited Duration Bill', 'addLimitedBill')
+      .addItem('💰 Add Bi-Weekly Income', 'addBiWeeklyIncome')
+      .addItem('📅 View Bill Schedule', 'showBillSchedule')
+      .addItem('📊 Budget Summary', 'showBudgetSummary'))
+    .addSeparator()
+    .addSubMenu(ui.createMenu('🏠 Mortgage Tools')
+      .addItem('🏠 Generate Mortgage Table', 'generateMortgageAmortization')
+      .addItem('📊 Generate Simulation Table', 'generateExtraPaymentSimulation'))
     .addToUi();
 }
 
@@ -861,4 +873,661 @@ function runCustomScenarios(cardName, scenarios) {
   }
   
   return compareScenarios(cardName, card.balance, card.apr, validScenarios);
+}
+
+/**
+ * ===========================================
+ * BILL TRACKING SYSTEM
+ * ===========================================
+ */
+
+/**
+ * Add a monthly recurring bill
+ */
+function addMonthlyBill() {
+  const ui = SpreadsheetApp.getUi();
+  
+  // Get bill name
+  const nameResult = ui.prompt(
+    'Add Monthly Bill',
+    'Enter bill name (e.g., "Electric Bill", "Netflix", "Car Payment"):',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (nameResult.getSelectedButton() !== ui.Button.OK) return;
+  const billName = nameResult.getResponseText().trim();
+  
+  // Get amount
+  const amountResult = ui.prompt(
+    'Bill Amount',
+    'Enter monthly amount (e.g., 150.50):',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (amountResult.getSelectedButton() !== ui.Button.OK) return;
+  const amount = parseFloat(amountResult.getResponseText().replace(/[$,]/g, ''));
+  
+  if (isNaN(amount) || amount <= 0) {
+    ui.alert('Error', 'Please enter a valid amount.', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Get due date
+  const dateResult = ui.prompt(
+    'Due Date',
+    'Enter due date (day of month, e.g., 15 for the 15th):',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (dateResult.getSelectedButton() !== ui.Button.OK) return;
+  const dueDay = parseInt(dateResult.getResponseText());
+  
+  if (isNaN(dueDay) || dueDay < 1 || dueDay > 31) {
+    ui.alert('Error', 'Please enter a valid day (1-31).', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Add to Bills sheet
+  const sheet = getOrCreateBillsSheet();
+  addBillToSheet(sheet, {
+    name: billName,
+    amount: amount,
+    type: 'Monthly',
+    dueDay: dueDay,
+    cycle: 'Monthly',
+    startDate: new Date(),
+    endDate: null,
+    totalPayments: null
+  });
+  
+  ui.alert('Success', `Added monthly bill: ${billName} - $${amount.toFixed(2)} due on the ${dueDay}${getOrdinalSuffix(dueDay)}`, ui.ButtonSet.OK);
+}
+
+/**
+ * Add a 28-day cycle bill
+ */
+function add28DayBill() {
+  const ui = SpreadsheetApp.getUi();
+  
+  // Get bill name
+  const nameResult = ui.prompt(
+    'Add 28-Day Bill',
+    'Enter bill name (e.g., "Phone Bill", "Online Service"):',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (nameResult.getSelectedButton() !== ui.Button.OK) return;
+  const billName = nameResult.getResponseText().trim();
+  
+  // Get amount
+  const amountResult = ui.prompt(
+    'Bill Amount',
+    'Enter amount per cycle:',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (amountResult.getSelectedButton() !== ui.Button.OK) return;
+  const amount = parseFloat(amountResult.getResponseText().replace(/[$,]/g, ''));
+  
+  if (isNaN(amount) || amount <= 0) {
+    ui.alert('Error', 'Please enter a valid amount.', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Get start date
+  const dateResult = ui.prompt(
+    'Next Due Date',
+    'Enter next due date (MM/DD/YYYY):',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (dateResult.getSelectedButton() !== ui.Button.OK) return;
+  const startDate = new Date(dateResult.getResponseText());
+  
+  if (isNaN(startDate.getTime())) {
+    ui.alert('Error', 'Please enter a valid date in MM/DD/YYYY format.', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Add to Bills sheet
+  const sheet = getOrCreateBillsSheet();
+  addBillToSheet(sheet, {
+    name: billName,
+    amount: amount,
+    type: '28-Day Cycle',
+    dueDay: null,
+    cycle: '28 Days',
+    startDate: startDate,
+    endDate: null,
+    totalPayments: null
+  });
+  
+  ui.alert('Success', `Added 28-day bill: ${billName} - $${amount.toFixed(2)} every 28 days starting ${startDate.toLocaleDateString()}`, ui.ButtonSet.OK);
+}
+
+/**
+ * Add a limited duration bill (like Affirm payments)
+ */
+function addLimitedBill() {
+  const ui = SpreadsheetApp.getUi();
+  
+  // Get bill name
+  const nameResult = ui.prompt(
+    'Add Limited Duration Bill',
+    'Enter bill name (e.g., "Affirm Payment", "Loan Payment"):',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (nameResult.getSelectedButton() !== ui.Button.OK) return;
+  const billName = nameResult.getResponseText().trim();
+  
+  // Get amount
+  const amountResult = ui.prompt(
+    'Bill Amount',
+    'Enter monthly amount:',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (amountResult.getSelectedButton() !== ui.Button.OK) return;
+  const amount = parseFloat(amountResult.getResponseText().replace(/[$,]/g, ''));
+  
+  if (isNaN(amount) || amount <= 0) {
+    ui.alert('Error', 'Please enter a valid amount.', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Get first payment date
+  const firstPaymentResult = ui.prompt(
+    'First Payment Date',
+    'Enter the date of the first payment (MM/DD/YYYY):',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (firstPaymentResult.getSelectedButton() !== ui.Button.OK) return;
+  const firstPaymentDate = new Date(firstPaymentResult.getResponseText());
+  
+  if (isNaN(firstPaymentDate.getTime())) {
+    ui.alert('Error', 'Please enter a valid date in MM/DD/YYYY format.', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Get due day from the first payment date
+  const dueDay = firstPaymentDate.getDate();
+  
+  // Get total payments
+  const paymentsResult = ui.prompt(
+    'Total Payments',
+    'Enter total number of payments (e.g., 12, 24, 36):',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (paymentsResult.getSelectedButton() !== ui.Button.OK) return;
+  const totalPayments = parseInt(paymentsResult.getResponseText());
+  
+  if (isNaN(totalPayments) || totalPayments <= 0) {
+    ui.alert('Error', 'Please enter a valid number of payments.', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Calculate end date based on first payment date and total payments
+  const endDate = new Date(firstPaymentDate.getFullYear(), firstPaymentDate.getMonth() + totalPayments, dueDay);
+  
+  // Calculate how many payments have been made (assume account is up to date)
+  const today = new Date();
+  let paymentsMade = 0;
+  
+  if (today >= firstPaymentDate) {
+    // Calculate number of months between first payment and today
+    const monthsDiff = (today.getFullYear() - firstPaymentDate.getFullYear()) * 12 + 
+                      (today.getMonth() - firstPaymentDate.getMonth());
+    
+    // If we're past the due day this month, count this month's payment
+    if (today.getDate() >= dueDay) {
+      paymentsMade = Math.min(monthsDiff + 1, totalPayments);
+    } else {
+      paymentsMade = Math.min(monthsDiff, totalPayments);
+    }
+  }
+  
+  // Format as "x/y" string
+  const paymentProgress = `${paymentsMade}/${totalPayments}`;
+  
+  // Add to Bills sheet
+  const sheet = getOrCreateBillsSheet();
+  addBillToSheet(sheet, {
+    name: billName,
+    amount: amount,
+    type: 'Limited Duration',
+    dueDay: dueDay,
+    cycle: 'Monthly',
+    startDate: firstPaymentDate,
+    endDate: endDate,
+    totalPayments: paymentProgress // Pass as string format
+  });
+  
+  ui.alert('Success', `Added limited bill: ${billName} - $${amount.toFixed(2)} due on the ${dueDay}${getOrdinalSuffix(dueDay)} for ${totalPayments} payments (${paymentsMade} made so far)`, ui.ButtonSet.OK);
+}
+
+/**
+ * Add bi-weekly income tracking
+ */
+function addBiWeeklyIncome() {
+  const ui = SpreadsheetApp.getUi();
+  
+  // Get pay amount
+  const amountResult = ui.prompt(
+    'Bi-Weekly Take Home Pay',
+    'Enter take-home amount per paycheck:',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (amountResult.getSelectedButton() !== ui.Button.OK) return;
+  const amount = parseFloat(amountResult.getResponseText().replace(/[$,]/g, ''));
+  
+  if (isNaN(amount) || amount <= 0) {
+    ui.alert('Error', 'Please enter a valid amount.', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Get next pay date
+  const dateResult = ui.prompt(
+    'Next Pay Date',
+    'Enter next pay date (MM/DD/YYYY):',
+    ui.ButtonSet.OK_CANCEL
+  );
+  
+  if (dateResult.getSelectedButton() !== ui.Button.OK) return;
+  const nextPayDate = new Date(dateResult.getResponseText());
+  
+  if (isNaN(nextPayDate.getTime())) {
+    ui.alert('Error', 'Please enter a valid date in MM/DD/YYYY format.', ui.ButtonSet.OK);
+    return;
+  }
+  
+  // Add to Income sheet
+  const sheet = getOrCreateIncomeSheet();
+  addIncomeToSheet(sheet, {
+    type: 'Bi-Weekly Pay',
+    amount: amount,
+    frequency: 'Bi-Weekly',
+    nextDate: nextPayDate
+  });
+  
+  ui.alert('Success', `Added bi-weekly income: $${amount.toFixed(2)} every 2 weeks starting ${nextPayDate.toLocaleDateString()}`, ui.ButtonSet.OK);
+}
+
+/**
+ * Get or create Bills sheet
+ */
+function getOrCreateBillsSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Bills');
+  
+  if (!sheet) {
+    sheet = ss.insertSheet('Bills');
+    
+    // Add headers
+    const headers = ['Bill Name', 'Amount', 'Type', 'Due Day', 'Cycle', 'Start Date', 'End Date', 'Total Payments', 'Status'];
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    
+    // Format headers
+    const headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setBackground('#2E7D32')
+      .setFontColor('#FFFFFF')
+      .setFontWeight('bold')
+      .setFontSize(11);
+    
+    sheet.autoResizeColumns(1, headers.length);
+  }
+  
+  return sheet;
+}
+
+/**
+ * Get or create Income sheet
+ */
+function getOrCreateIncomeSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName('Income');
+  
+  if (!sheet) {
+    sheet = ss.insertSheet('Income');
+    
+    // Add headers
+    const headers = ['Income Type', 'Amount', 'Frequency', 'Next Date', 'Monthly Estimate'];
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    
+    // Format headers
+    const headerRange = sheet.getRange(1, 1, 1, headers.length);
+    headerRange.setBackground('#1565C0')
+      .setFontColor('#FFFFFF')
+      .setFontWeight('bold')
+      .setFontSize(11);
+    
+    sheet.autoResizeColumns(1, headers.length);
+  }
+  
+  return sheet;
+}
+
+/**
+ * Add bill to sheet
+ */
+function addBillToSheet(sheet, bill) {
+  const row = [
+    bill.name,
+    bill.amount,
+    bill.type,
+    bill.dueDay || '',
+    bill.cycle,
+    bill.startDate,
+    bill.endDate || '',
+    bill.totalPayments || '',
+    'Active'
+  ];
+  
+  sheet.appendRow(row);
+  
+  // Format the amount column
+  const lastRow = sheet.getLastRow();
+  sheet.getRange(lastRow, 2).setNumberFormat('"$"#,##0.00');
+  
+  // Format date columns
+  if (bill.startDate) {
+    sheet.getRange(lastRow, 6).setNumberFormat('MM/DD/YYYY');
+  }
+  if (bill.endDate) {
+    sheet.getRange(lastRow, 7).setNumberFormat('MM/DD/YYYY');
+  }
+  
+  // Format Total Payments column as text to prevent fraction interpretation
+  if (bill.totalPayments && typeof bill.totalPayments === 'string' && bill.totalPayments.includes('/')) {
+    sheet.getRange(lastRow, 8).setNumberFormat('@'); // @ symbol formats as text
+  }
+}
+
+/**
+ * Add income to sheet
+ */
+function addIncomeToSheet(sheet, income) {
+  // Calculate monthly estimate for bi-weekly pay (26 pay periods / 12 months)
+  const monthlyEstimate = income.frequency === 'Bi-Weekly' ? (income.amount * 26) / 12 : income.amount;
+  
+  const row = [
+    income.type,
+    income.amount,
+    income.frequency,
+    income.nextDate,
+    monthlyEstimate
+  ];
+  
+  sheet.appendRow(row);
+  
+  // Format currency columns
+  const lastRow = sheet.getLastRow();
+  sheet.getRange(lastRow, 2).setNumberFormat('"$"#,##0.00'); // Amount
+  sheet.getRange(lastRow, 5).setNumberFormat('"$"#,##0.00'); // Monthly estimate
+  
+  // Format date column
+  sheet.getRange(lastRow, 4).setNumberFormat('MM/DD/YYYY');
+}
+
+/**
+ * Helper function to get ordinal suffix
+ */
+function getOrdinalSuffix(day) {
+  if (day >= 11 && day <= 13) {
+    return 'th';
+  }
+  switch (day % 10) {
+    case 1: return 'st';
+    case 2: return 'nd';
+    case 3: return 'rd';
+    default: return 'th';
+  }
+}
+
+/**
+ * Show bill schedule for the next few months
+ */
+function showBillSchedule() {
+  const billsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Bills');
+  const incomeSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Income');
+  
+  if (!billsSheet && !incomeSheet) {
+    SpreadsheetApp.getUi().alert('No Data', 'Please add some bills and income first.', SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
+  
+  // Create or get schedule sheet
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let scheduleSheet = ss.getSheetByName('Bill Schedule');
+  
+  if (!scheduleSheet) {
+    scheduleSheet = ss.insertSheet('Bill Schedule');
+  } else {
+    scheduleSheet.clear();
+  }
+  
+  // Generate schedule for next 6 months
+  const today = new Date();
+  const scheduleData = [];
+  
+  // Add header
+  scheduleSheet.getRange(1, 1, 1, 4).setValues([['📅 BILL SCHEDULE - Next 6 Months', '', '', '']]);
+  scheduleSheet.getRange(1, 1, 1, 4).merge().setBackground('#FF9800').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(14);
+  
+  const headers = ['Date', 'Item', 'Type', 'Amount'];
+  scheduleSheet.getRange(3, 1, 1, headers.length).setValues([headers]);
+  scheduleSheet.getRange(3, 1, 1, headers.length)
+    .setBackground('#455A64')
+    .setFontColor('#FFFFFF')
+    .setFontWeight('bold');
+  
+  // Process bills
+  if (billsSheet && billsSheet.getLastRow() > 1) {
+    const billData = billsSheet.getDataRange().getValues();
+    
+    for (let i = 1; i < billData.length; i++) {
+      const bill = billData[i];
+      const billName = bill[0];
+      const amount = bill[1];
+      const type = bill[2];
+      const dueDay = bill[3];
+      const cycle = bill[4];
+      const startDate = bill[5];
+      const endDate = bill[6];
+      const status = bill[8];
+      
+      if (status !== 'Active') continue;
+      
+      // Generate dates for next 6 months
+      for (let month = 0; month < 6; month++) {
+        const targetDate = new Date(today.getFullYear(), today.getMonth() + month, 1);
+        let billDate;
+        
+        if (cycle === 'Monthly') {
+          billDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), dueDay);
+        } else if (cycle === '28 Days') {
+          // Calculate 28-day cycles from start date
+          const daysSinceStart = Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+          const cyclesSinceStart = Math.floor(daysSinceStart / 28);
+          billDate = new Date(startDate.getTime() + (cyclesSinceStart + month) * 28 * 24 * 60 * 60 * 1000);
+        }
+        
+        if (billDate && billDate >= today) {
+          // Check if this bill is still active (for limited duration bills)
+          if (!endDate || billDate <= endDate) {
+            scheduleData.push([
+              billDate,
+              billName,
+              `Bill - ${type}`,
+              amount
+            ]);
+          }
+        }
+      }
+    }
+  }
+  
+  // Process income (paychecks)
+  if (incomeSheet && incomeSheet.getLastRow() > 1) {
+    const incomeData = incomeSheet.getDataRange().getValues();
+    
+    for (let i = 1; i < incomeData.length; i++) {
+      const income = incomeData[i];
+      const incomeType = income[0];
+      const amount = income[1];
+      const frequency = income[2];
+      const nextDate = income[3];
+      
+      if (frequency === 'Bi-Weekly') {
+        // Generate bi-weekly paychecks for next 6 months
+        let payDate = new Date(nextDate);
+        const endScheduleDate = new Date(today.getFullYear(), today.getMonth() + 6, 1);
+        
+        while (payDate <= endScheduleDate) {
+          if (payDate >= today) {
+            scheduleData.push([
+              payDate,
+              incomeType,
+              'Income',
+              amount
+            ]);
+          }
+          payDate = new Date(payDate.getTime() + 14 * 24 * 60 * 60 * 1000); // Add 14 days
+        }
+      }
+    }
+  }
+  
+  // Sort by date
+  scheduleData.sort((a, b) => a[0] - b[0]);
+  
+  // Write data to sheet
+  if (scheduleData.length > 0) {
+    const dataRange = scheduleSheet.getRange(4, 1, scheduleData.length, 4);
+    dataRange.setValues(scheduleData);
+    
+    // Format dates
+    scheduleSheet.getRange(4, 1, scheduleData.length, 1).setNumberFormat('MM/DD/YYYY');
+    
+    // Format amounts
+    scheduleSheet.getRange(4, 4, scheduleData.length, 1).setNumberFormat('"$"#,##0.00');
+    
+    // Color code rows
+    for (let i = 0; i < scheduleData.length; i++) {
+      const rowRange = scheduleSheet.getRange(4 + i, 1, 1, 4);
+      const itemType = scheduleData[i][2];
+      
+      if (itemType === 'Income') {
+        rowRange.setBackground('#E8F5E8'); // Light green for income
+      } else if (itemType.includes('Bill')) {
+        rowRange.setBackground('#FFF3E0'); // Light orange for bills
+      }
+    }
+  }
+  
+  scheduleSheet.autoResizeColumns(1, 4);
+  SpreadsheetApp.getUi().alert('Success', 'Bill schedule generated! Check the "Bill Schedule" tab.', SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
+/**
+ * Show budget summary
+ */
+function showBudgetSummary() {
+  const billsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Bills');
+  const incomeSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Income');
+  
+  if (!billsSheet && !incomeSheet) {
+    SpreadsheetApp.getUi().alert('No Data', 'Please add some bills and income first.', SpreadsheetApp.getUi().ButtonSet.OK);
+    return;
+  }
+  
+  // Create or get budget sheet
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let budgetSheet = ss.getSheetByName('Budget Summary');
+  
+  if (!budgetSheet) {
+    budgetSheet = ss.insertSheet('Budget Summary');
+  } else {
+    budgetSheet.clear();
+  }
+  
+  // Calculate totals
+  let totalMonthlyIncome = 0;
+  let totalMonthlyBills = 0;
+  let total28DayBills = 0;
+  
+  // Process income
+  if (incomeSheet && incomeSheet.getLastRow() > 1) {
+    const incomeData = incomeSheet.getDataRange().getValues();
+    for (let i = 1; i < incomeData.length; i++) {
+      totalMonthlyIncome += incomeData[i][4]; // Monthly estimate column
+    }
+  }
+  
+  // Process bills
+  if (billsSheet && billsSheet.getLastRow() > 1) {
+    const billData = billsSheet.getDataRange().getValues();
+    for (let i = 1; i < billData.length; i++) {
+      const amount = billData[i][1];
+      const cycle = billData[i][4];
+      const status = billData[i][8];
+      
+      if (status === 'Active') {
+        if (cycle === 'Monthly') {
+          totalMonthlyBills += amount;
+        } else if (cycle === '28 Days') {
+          total28DayBills += amount;
+        }
+      }
+    }
+  }
+  
+  // Approximate 28-day bills as monthly (28-day cycle ≈ 13 payments per year)
+  const estimated28DayMonthly = total28DayBills * 13 / 12;
+  const totalEstimatedMonthlyExpenses = totalMonthlyBills + estimated28DayMonthly;
+  const netMonthlyFlow = totalMonthlyIncome - totalEstimatedMonthlyExpenses;
+  
+  // Create budget summary
+  const summaryData = [
+    ['💰 MONTHLY BUDGET SUMMARY', ''],
+    ['', ''],
+    ['📈 INCOME', ''],
+    ['Monthly Income (Est.):', totalMonthlyIncome],
+    ['', ''],
+    ['📊 EXPENSES', ''],
+    ['Monthly Bills:', totalMonthlyBills],
+    ['28-Day Bills (Est. Monthly):', estimated28DayMonthly],
+    ['Total Monthly Expenses:', totalEstimatedMonthlyExpenses],
+    ['', ''],
+    ['💡 NET CASH FLOW', ''],
+    ['Available per Month:', netMonthlyFlow]
+  ];
+  
+  budgetSheet.getRange(1, 1, summaryData.length, 2).setValues(summaryData);
+  
+  // Format the summary
+  budgetSheet.getRange(1, 1, 1, 2).merge().setBackground('#4CAF50').setFontColor('#FFFFFF').setFontWeight('bold').setFontSize(14);
+  budgetSheet.getRange(3, 1).setBackground('#2196F3').setFontColor('#FFFFFF').setFontWeight('bold');
+  budgetSheet.getRange(6, 1).setBackground('#FF9800').setFontColor('#FFFFFF').setFontWeight('bold');
+  budgetSheet.getRange(11, 1).setBackground('#9C27B0').setFontColor('#FFFFFF').setFontWeight('bold');
+  
+  // Color code the net flow
+  const netFlowCell = budgetSheet.getRange(12, 2);
+  if (netMonthlyFlow > 0) {
+    netFlowCell.setBackground('#C8E6C9').setFontColor('#2E7D32').setFontWeight('bold');
+  } else {
+    netFlowCell.setBackground('#FFCDD2').setFontColor('#C62828').setFontWeight('bold');
+  }
+  
+  // Format currency columns
+  const currencyRows = [4, 7, 8, 9, 12];
+  currencyRows.forEach(row => {
+    budgetSheet.getRange(row, 2).setNumberFormat('"$"#,##0.00');
+  });
+  
+  budgetSheet.autoResizeColumns(1, 2);
+  SpreadsheetApp.getUi().alert('Success', 'Budget summary generated! Check the "Budget Summary" tab.', SpreadsheetApp.getUi().ButtonSet.OK);
 }
