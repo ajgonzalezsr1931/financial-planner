@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+            margin: 15px;
+            line-height: 1.4;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #3c4043;
+        }
+        
+        input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 2px rgba(26, 115, 232, 0.2);
+        }
+        
+        .btn {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        .btn:hover {
+            background: #1557b0;
+        }
+        
+        .result-box {
+            background: #f8f9fa;
+            border: 1px solid #e8eaed;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .result-title {
+            font-weight: bold;
+            color: #1a73e8;
+            margin-bottom: 10px;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .result-value {
+            font-weight: 500;
+            color: #1a73e8;
+        }
+        
+        .error {
+            color: #ea4335;
+            background: #ffeaea;
+            border: 1px solid #e57373;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        
+        .input-hint {
+            font-size: 11px;
+            color: #5f6368;
+            margin-top: 3px;
+        }
+        
+        .calculator-mode {
+            background: #e8f5e8;
+            border: 1px solid #81c784;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .mode-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .mode-btn {
+            flex: 1;
+            padding: 8px;
+            background: #f8f9fa;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            text-align: center;
+        }
+        
+        .mode-btn.active {
+            background: #1a73e8;
+            color: white;
+            border-color: #1a73e8;
+        }
+        
+        .payoff-timeline {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #dadce0;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        
+        .timeline-item {
+            padding: 5px 10px;
+            border-bottom: 1px solid #f0f0f0;
+            font-size: 11px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .timeline-item:last-child {
+            border-bottom: none;
+        }
+        
+        .timeline-item:nth-child(even) {
+            background: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator-mode">
+        <strong>Quick Payment Calculator</strong><br>
+        Calculate required payments and payoff scenarios
+    </div>
+    
+    <div class="mode-buttons">
+        <div class="mode-btn active" onclick="switchMode('payment')">Payment Calculator</div>
+        <div class="mode-btn" onclick="switchMode('timeline')">Payoff Timeline</div>
+    </div>
+    
+    <!-- Payment Calculator Mode -->
+    <div id="paymentMode">
+        <div class="form-group">
+            <label for="calcBalance">Current Balance ($)</label>
+            <input type="number" id="calcBalance" placeholder="5000.00" min="0" step="0.01">
+            <div class="input-hint">Enter the current balance owed</div>
+        </div>
+        
+        <div class="form-group">
+            <label for="calcApr">APR (%)</label>
+            <input type="number" id="calcApr" placeholder="18.99" min="0" max="50" step="0.01">
+            <div class="input-hint">Annual Percentage Rate</div>
+        </div>
+        
+        <div class="form-group">
+            <label for="calcMonths">Target Payoff Time (Months)</label>
+            <input type="number" id="calcMonths" placeholder="24" min="1" max="360">
+            <div class="input-hint">How many months to pay off the debt</div>
+        </div>
+        
+        <button class="btn" onclick="calculatePayment()">Calculate Required Payment</button>
+    </div>
+    
+    <!-- Timeline Mode -->
+    <div id="timelineMode" style="display: none;">
+        <div class="form-group">
+            <label for="timelineBalance">Current Balance ($)</label>
+            <input type="number" id="timelineBalance" placeholder="5000.00" min="0" step="0.01">
+        </div>
+        
+        <div class="form-group">
+            <label for="timelineApr">APR (%)</label>
+            <input type="number" id="timelineApr" placeholder="18.99" min="0" max="50" step="0.01">
+        </div>
+        
+        <div class="form-group">
+            <label for="timelinePayment">Monthly Payment ($)</label>
+            <input type="number" id="timelinePayment" placeholder="200.00" min="0" step="0.01">
+            <div class="input-hint">Planned monthly payment amount</div>
+        </div>
+        
+        <button class="btn" onclick="calculateTimeline()">Generate Payoff Timeline</button>
+    </div>
+    
+    <div id="results"></div>
+
+    <script>
+        let currentMode = 'payment';
+        
+        function switchMode(mode) {
+            currentMode = mode;
+            
+            // Update button states
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            if (mode === 'payment') {
+                document.querySelectorAll('.mode-btn')[0].classList.add('active');
+                document.getElementById('paymentMode').style.display = 'block';
+                document.getElementById('timelineMode').style.display = 'none';
+            } else {
+                document.querySelectorAll('.mode-btn')[1].classList.add('active');
+                document.getElementById('paymentMode').style.display = 'none';
+                document.getElementById('timelineMode').style.display = 'block';
+            }
+            
+            // Clear results
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        function calculatePayment() {
+            const balance = parseFloat(document.getElementById('calcBalance').value) || 0;
+            const apr = parseFloat(document.getElementById('calcApr').value) || 0;
+            const months = parseInt(document.getElementById('calcMonths').value) || 0;
+            
+            // Validation
+            if (balance <= 0) {
+                showError('Please enter a valid balance greater than $0');
+                return;
+            }
+            
+            if (apr < 0 || apr > 50) {
+                showError('Please enter a valid APR between 0% and 50%');
+                return;
+            }
+            
+            if (months < 1 || months > 360) {
+                showError('Please enter a valid number of months (1-360)');
+                return;
+            }
+            
+            // Calculate
+            google.script.run
+                .withSuccessHandler(displayPaymentResults)
+                .withFailureHandler(showScriptError)
+                .calculateMonthlyPayment(balance, apr, months);
+        }
+        
+        function calculateTimeline() {
+            const balance = parseFloat(document.getElementById('timelineBalance').value) || 0;
+            const apr = parseFloat(document.getElementById('timelineApr').value) || 0;
+            const payment = parseFloat(document.getElementById('timelinePayment').value) || 0;
+            
+            // Validation
+            if (balance <= 0) {
+                showError('Please enter a valid balance greater than $0');
+                return;
+            }
+            
+            if (apr < 0 || apr > 50) {
+                showError('Please enter a valid APR between 0% and 50%');
+                return;
+            }
+            
+            if (payment <= 0) {
+                showError('Please enter a valid monthly payment greater than $0');
+                return;
+            }
+            
+            // Calculate
+            google.script.run
+                .withSuccessHandler(displayTimelineResults)
+                .withFailureHandler(showScriptError)
+                .calculatePayoffTimeline(balance, apr, payment);
+        }
+        
+        function displayPaymentResults(requiredPayment) {
+            const balance = parseFloat(document.getElementById('calcBalance').value);
+            const apr = parseFloat(document.getElementById('calcApr').value);
+            const months = parseInt(document.getElementById('calcMonths').value);
+            
+            // Calculate additional info
+            google.script.run
+                .withSuccessHandler((timeline) => {
+                    const totalPaid = balance + timeline.totalInterest;
+                    const interestPercentage = ((timeline.totalInterest / balance) * 100).toFixed(1);
+                    
+                    document.getElementById('results').innerHTML = `
+                        <div class="result-box">
+                            <div class="result-title">Payment Calculation Results</div>
+                            <div class="result-item">
+                                <span>Required Monthly Payment:</span>
+                                <span class="result-value">$${requiredPayment.toFixed(2)}</span>
+                            </div>
+                            <div class="result-item">
+                                <span>Total Interest Paid:</span>
+                                <span class="result-value">$${timeline.totalInterest.toFixed(2)}</span>
+                            </div>
+                            <div class="result-item">
+                                <span>Total Amount Paid:</span>
+                                <span class="result-value">$${totalPaid.toFixed(2)}</span>
+                            </div>
+                            <div class="result-item">
+                                <span>Interest as % of Balance:</span>
+                                <span class="result-value">${interestPercentage}%</span>
+                            </div>
+                            <div class="result-item">
+                                <span>Payoff Time:</span>
+                                <span class="result-value">${months} months</span>
+                            </div>
+                        </div>
+                    `;
+                })
+                .withFailureHandler(showScriptError)
+                .calculatePayoffTimeline(balance, apr, requiredPayment);
+        }
+        
+        function displayTimelineResults(timeline) {
+            if (timeline.error) {
+                showError(timeline.error);
+                return;
+            }
+            
+            const balance = parseFloat(document.getElementById('timelineBalance').value);
+            const payment = parseFloat(document.getElementById('timelinePayment').value);
+            
+            let timelineHtml = '';
+            if (timeline.timeline.length > 0) {
+                timelineHtml = `
+                    <div class="payoff-timeline">
+                        ${timeline.timeline.slice(0, 12).map(month => `
+                            <div class="timeline-item">
+                                <span>Month ${month.month}</span>
+                                <span>Balance: $${month.balance}</span>
+                            </div>
+                        `).join('')}
+                        ${timeline.timeline.length > 12 ? '<div class="timeline-item"><span colspan="2">... (showing first 12 months)</span></div>' : ''}
+                    </div>
+                `;
+            }
+            
+            const interestPercentage = ((timeline.totalInterest / balance) * 100).toFixed(1);
+            
+            document.getElementById('results').innerHTML = `
+                <div class="result-box">
+                    <div class="result-title">Payoff Timeline Results</div>
+                    <div class="result-item">
+                        <span>Monthly Payment:</span>
+                        <span class="result-value">$${payment.toFixed(2)}</span>
+                    </div>
+                    <div class="result-item">
+                        <span>Payoff Time:</span>
+                        <span class="result-value">${timeline.totalMonths} months</span>
+                    </div>
+                    <div class="result-item">
+                        <span>Total Interest:</span>
+                        <span class="result-value">$${timeline.totalInterest.toFixed(2)}</span>
+                    </div>
+                    <div class="result-item">
+                        <span>Total Paid:</span>
+                        <span class="result-value">$${timeline.totalPaid.toFixed(2)}</span>
+                    </div>
+                    <div class="result-item">
+                        <span>Interest as % of Balance:</span>
+                        <span class="result-value">${interestPercentage}%</span>
+                    </div>
+                    ${timelineHtml}
+                </div>
+            `;
+        }
+        
+        function showError(message) {
+            document.getElementById('results').innerHTML = `
+                <div class="error">
+                    <strong>Error:</strong> ${message}
+                </div>
+            `;
+        }
+        
+        function showScriptError(error) {
+            showError(error.message || 'An unexpected error occurred');
+            console.error(error);
+        }
+        
+        // Auto-calculate on Enter key
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                if (currentMode === 'payment') {
+                    calculatePayment();
+                } else {
+                    calculateTimeline();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

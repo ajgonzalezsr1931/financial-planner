@@ -1,0 +1,29 @@
+# Backup files
+*.bak
+*.backup
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Temporary files
+*~
+*.tmp
+*.temp
+
+# IDE files
+.vscode/
+.idea/
+
+# Node modules (if any)
+node_modules/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local

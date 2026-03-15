@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <base target="_top">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+            margin: 10px;
+            line-height: 1.4;
+        }
+        
+        .section {
+            background: #f8f9fa;
+            border: 1px solid #e8eaed;
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .section-title {
+            font-weight: bold;
+            color: #1a73e8;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 10px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 3px;
+            font-weight: 500;
+            color: #3c4043;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #dadce0;
+            border-radius: 3px;
+            font-size: 13px;
+            box-sizing: border-box;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #1a73e8;
+            box-shadow: 0 0 0 1px #1a73e8;
+        }
+        
+        .btn {
+            background: #1a73e8;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        
+        .btn:hover {
+            background: #1557b0;
+        }
+        
+        .btn-secondary {
+            background: #5f6368;
+        }
+        
+        .btn-secondary:hover {
+            background: #4a4d51;
+        }
+        
+        .btn-danger {
+            background: #ea4335;
+        }
+        
+        .btn-danger:hover {
+            background: #d33b2c;
+        }
+        
+        .status {
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+        
+        .status.success {
+            background: #e8f5e8;
+            border: 1px solid #81c784;
+            color: #2e7d32;
+        }
+        
+        .status.error {
+            background: #ffeaea;
+            border: 1px solid #e57373;
+            color: #c62828;
+        }
+        
+        .card-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #dadce0;
+            border-radius: 3px;
+            padding: 5px;
+            background: white;
+        }
+        
+        .card-item {
+            padding: 8px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            border-radius: 2px;
+        }
+        
+        .card-item:hover {
+            background: #f8f9fa;
+        }
+        
+        .card-item:last-child {
+            border-bottom: none;
+        }
+        
+        .card-name {
+            font-weight: 500;
+            color: #1a73e8;
+        }
+        
+        .card-details {
+            font-size: 11px;
+            color: #5f6368;
+            margin-top: 2px;
+        }
+        
+        .input-hint {
+            font-size: 11px;
+            color: #5f6368;
+            margin-top: 2px;
+        }
+        
+        .quick-actions {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
+        .quick-actions .btn {
+            flex: 1;
+            font-size: 11px;
+            padding: 6px 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="section">
+        <div class="section-title">Add Credit Card</div>
+        
+        <div class="form-group">
+            <label for="cardName">Card Name</label>
+            <input type="text" id="cardName" placeholder="e.g., Chase Freedom, Capital One">
+        </div>
+        
+        <div class="form-group">
+            <label for="balance">Current Balance ($)</label>
+            <input type="number" id="balance" placeholder="0.00" min="0" step="0.01">
+            <div class="input-hint">Enter current balance owed</div>
+        </div>
+        
+        <div class="form-group">
+            <label for="apr">APR (%)</label>
+            <input type="number" id="apr" placeholder="18.99" min="0" max="50" step="0.01">
+            <div class="input-hint">Annual Percentage Rate</div>
+        </div>
+        
+        <div class="form-group">
+            <label for="minPayment">Minimum Payment ($)</label>
+            <input type="number" id="minPayment" placeholder="25.00" min="0" step="0.01">
+            <div class="input-hint">Current minimum monthly payment</div>
+        </div>
+        
+        <div class="form-group">
+            <label for="targetMonths">Target Payoff (Months)</label>
+            <input type="number" id="targetMonths" placeholder="24" min="1" max="360">
+            <div class="input-hint">How many months to pay off</div>
+        </div>
+        
+        <button class="btn" onclick="addCard()">Add Credit Card</button>
+        <div id="addStatus"></div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">Existing Credit Cards</div>
+        <div id="cardList" class="card-list">
+            <div style="color: #5f6368; text-align: center; padding: 20px;">
+                No credit cards added yet
+            </div>
+        </div>
+        <button class="btn btn-secondary" onclick="refreshCards()">Refresh List</button>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">Analysis Tools</div>
+        
+        <div class="form-group">
+            <label for="selectedCard">Select Card for Analysis</label>
+            <select id="selectedCard" onchange="onCardSelected()">
+                <option value="">Choose a credit card...</option>
+            </select>
+        </div>
+        
+        <div id="cardInfo" style="display: none; background: #e8f5e8; padding: 8px; border-radius: 3px; margin-bottom: 10px; font-size: 12px;">
+            <div id="cardDetails"></div>
+        </div>
+        
+        <div class="form-group">
+            <label for="targetMonthsAnalysis">Target Payoff (Months)</label>
+            <input type="number" id="targetMonthsAnalysis" placeholder="24" min="1" max="360">
+            <div class="input-hint">Months to pay off - will update when you select a card</div>
+        </div>
+        
+        <div class="quick-actions">
+            <button class="btn" onclick="generateSchedule()">Payment Schedule</button>
+            <button class="btn" onclick="compareScenarios()">Compare Scenarios</button>
+        </div>
+        
+        <div class="form-group" style="margin-top: 15px;">
+            <label for="customPayment">Custom Payment Amount ($)</label>
+            <input type="number" id="customPayment" placeholder="100.00" min="0" step="0.01">
+        </div>
+        
+        <button class="btn" onclick="generateCustomSchedule()">Generate Custom Schedule</button>
+        <div id="analysisStatus"></div>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">Scenario Comparison</div>
+        <p style="font-size: 12px; color: #5f6368; margin-bottom: 10px;">
+            Compare different payment amounts for selected card
+        </p>
+        
+        <div class="form-group">
+            <label>Payment Scenarios</label>
+            <div style="display: flex; gap: 5px; margin-bottom: 5px;">
+                <input type="number" id="scenario1" placeholder="Min Payment" style="flex: 1;">
+                <input type="number" id="scenario2" placeholder="Double Min" style="flex: 1;">
+            </div>
+            <div style="display: flex; gap: 5px;">
+                <input type="number" id="scenario3" placeholder="Fixed Amount" style="flex: 1;">
+                <input type="number" id="scenario4" placeholder="Aggressive" style="flex: 1;">
+            </div>
+        </div>
+        
+        <button class="btn" onclick="runScenarioComparison()">Compare All Scenarios</button>
+    </div>
+    
+    <div class="section">
+        <div class="section-title">Management</div>
+        <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
+        <div style="font-size: 11px; color: #5f6368; margin-top: 5px;">
+            This will remove all sheets and data created by the Credit Card Planner
+        </div>
+    </div>
+
+    <script>
+        // Load existing cards on startup
+        window.onload = function() {
+            refreshCards();
+        };
+        
+        function addCard() {
+            const cardData = {
+                name: document.getElementById('cardName').value.trim(),
+                balance: parseFloat(document.getElementById('balance').value) || 0,
+                apr: parseFloat(document.getElementById('apr').value) || 0,
+                minPayment: parseFloat(document.getElementById('minPayment').value) || 0,
+                targetMonths: parseInt(document.getElementById('targetMonths').value) || 12
+            };
+            
+            // Validation
+            if (!cardData.name) {
+                showStatus('addStatus', 'Please enter a card name', 'error');
+                return;
+            }
+            
+            if (cardData.balance <= 0) {
+                showStatus('addStatus', 'Please enter a valid balance', 'error');
+                return;
+            }
+            
+            if (cardData.apr < 0 || cardData.apr > 50) {
+                showStatus('addStatus', 'Please enter a valid APR (0-50%)', 'error');
+                return;
+            }
+            
+            if (cardData.targetMonths < 1) {
+                showStatus('addStatus', 'Target months must be at least 1', 'error');
+                return;
+            }
+            
+            // Show loading
+            showStatus('addStatus', 'Adding credit card...', 'success');
+            
+            google.script.run
+                .withSuccessHandler(onCardAdded)
+                .withFailureHandler(onError)
+                .addCreditCard(cardData);
+        }
+        
+        function onCardAdded(result) {
+            if (result.success) {
+                showStatus('addStatus', `Card added successfully! Required payment: $${result.requiredPayment}`, 'success');
+                
+                // Clear form
+                document.getElementById('cardName').value = '';
+                document.getElementById('balance').value = '';
+                document.getElementById('apr').value = '';
+                document.getElementById('minPayment').value = '';
+                document.getElementById('targetMonths').value = '';
+                
+                // Refresh the card list
+                refreshCards();
+            } else {
+                showStatus('addStatus', 'Error adding card', 'error');
+            }
+        }
+        
+        function refreshCards() {
+            google.script.run
+                .withSuccessHandler(displayCards)
+                .withFailureHandler(onError)
+                .getCreditCards();
+        }
+        
+        function displayCards(cards) {
+            const cardList = document.getElementById('cardList');
+            const selectedCard = document.getElementById('selectedCard');
+            
+            if (cards.length === 0) {
+                cardList.innerHTML = '<div style="color: #5f6368; text-align: center; padding: 20px;">No credit cards added yet</div>';
+                selectedCard.innerHTML = '<option value="">Choose a credit card...</option>';
+                return;
+            }
+            
+            // Store cards data globally for easy access
+            window.cardsData = cards;
+            
+            // Update card list display
+            cardList.innerHTML = cards.map(card => `
+                <div class="card-item" onclick="selectCard('${card.name}')">
+                    <div class="card-name">${card.name}</div>
+                    <div class="card-details">
+                        Balance: $${card.balance} | APR: ${card.apr}% | Min: $${card.minPayment}
+                    </div>
+                </div>
+            `).join('');
+            
+            // Update dropdown
+            selectedCard.innerHTML = '<option value="">Choose a credit card...</option>' + 
+                cards.map(card => `<option value="${card.name}">${card.name}</option>`).join('');
+        }
+        
+        function selectCard(cardName) {
+            document.getElementById('selectedCard').value = cardName;
+            onCardSelected();
+        }
+        
+        function onCardSelected() {
+            const cardName = document.getElementById('selectedCard').value;
+            const cardInfo = document.getElementById('cardInfo');
+            const cardDetails = document.getElementById('cardDetails');
+            const targetMonthsInput = document.getElementById('targetMonthsAnalysis');
+            
+            if (!cardName || !window.cardsData) {
+                cardInfo.style.display = 'none';
+                targetMonthsInput.value = '';
+                return;
+            }
+            
+            const card = window.cardsData.find(c => c.name === cardName);
+            if (card) {
+                // Show card information
+                cardDetails.innerHTML = `
+                    <strong>${card.name}</strong><br>
+                    Balance: $${card.balance} | APR: ${card.apr}% | Min Payment: $${card.minPayment}
+                `;
+                cardInfo.style.display = 'block';
+                
+                // Set target months to the originally specified value
+                targetMonthsInput.value = card.targetMonths || 24;
+            }
+        }
+        
+        function generateSchedule() {
+            const cardName = document.getElementById('selectedCard').value;
+            const targetMonths = parseInt(document.getElementById('targetMonthsAnalysis').value) || 24;
+            
+            if (!cardName) {
+                showStatus('analysisStatus', 'Please select a credit card first', 'error');
+                return;
+            }
+            
+            if (targetMonths < 1 || targetMonths > 360) {
+                showStatus('analysisStatus', 'Please enter valid target months (1-360)', 'error');
+                return;
+            }
+            
+            showStatus('analysisStatus', 'Generating payment schedule...', 'success');
+            
+            google.script.run
+                .withSuccessHandler(() => {
+                    showStatus('analysisStatus', 'Payment schedule generated successfully!', 'success');
+                })
+                .withFailureHandler(onError)
+                .generatePayoffScheduleForCard(cardName, targetMonths);
+        }
+        
+        function generateCustomSchedule() {
+            const cardName = document.getElementById('selectedCard').value;
+            const customPayment = parseFloat(document.getElementById('customPayment').value) || 0;
+            
+            if (!cardName) {
+                showStatus('analysisStatus', 'Please select a credit card first', 'error');
+                return;
+            }
+            
+            if (customPayment <= 0) {
+                showStatus('analysisStatus', 'Please enter a valid payment amount', 'error');
+                return;
+            }
+            
+            showStatus('analysisStatus', 'Generating custom payment schedule...', 'success');
+            
+            google.script.run
+                .withSuccessHandler(() => {
+                    showStatus('analysisStatus', 'Custom payment schedule generated!', 'success');
+                })
+                .withFailureHandler(onError)
+                .generateCustomPaymentSchedule(cardName, customPayment);
+        }
+        
+        function compareScenarios() {
+            const cardName = document.getElementById('selectedCard').value;
+            const targetMonths = parseInt(document.getElementById('targetMonthsAnalysis').value) || 24;
+            
+            if (!cardName) {
+                showStatus('analysisStatus', 'Please select a credit card first', 'error');
+                return;
+            }
+            
+            if (targetMonths < 1 || targetMonths > 360) {
+                showStatus('analysisStatus', 'Please enter valid target months (1-360)', 'error');
+                return;
+            }
+            
+            showStatus('analysisStatus', 'Generating scenario comparison...', 'success');
+            
+            google.script.run
+                .withSuccessHandler(() => {
+                    showStatus('analysisStatus', 'Scenario comparison generated!', 'success');
+                })
+                .withFailureHandler(onError)
+                .generateDefaultScenarios(cardName, targetMonths);
+        }
+        
+        function runScenarioComparison() {
+            const cardName = document.getElementById('selectedCard').value;
+            if (!cardName) {
+                showStatus('analysisStatus', 'Please select a credit card first', 'error');
+                return;
+            }
+            
+            const card = window.cardsData.find(c => c.name === cardName);
+            if (!card) {
+                showStatus('analysisStatus', 'Card not found', 'error');
+                return;
+            }
+            
+            // Get scenario values
+            const scenario1 = parseFloat(document.getElementById('scenario1').value) || 0;
+            const scenario2 = parseFloat(document.getElementById('scenario2').value) || 0;
+            const scenario3 = parseFloat(document.getElementById('scenario3').value) || 0;
+            const scenario4 = parseFloat(document.getElementById('scenario4').value) || 0;
+            
+            // Build scenarios array and check for minimum payment validation
+            const scenarios = [];
+            let belowMinCount = 0;
+            
+            if (scenario1 > 0) {
+                if (scenario1 >= card.minPayment) {
+                    scenarios.push({ name: 'Scenario 1', payment: scenario1 });
+                } else {
+                    belowMinCount++;
+                }
+            }
+            if (scenario2 > 0) {
+                if (scenario2 >= card.minPayment) {
+                    scenarios.push({ name: 'Scenario 2', payment: scenario2 });
+                } else {
+                    belowMinCount++;
+                }
+            }
+            if (scenario3 > 0) {
+                if (scenario3 >= card.minPayment) {
+                    scenarios.push({ name: 'Scenario 3', payment: scenario3 });
+                } else {
+                    belowMinCount++;
+                }
+            }
+            if (scenario4 > 0) {
+                if (scenario4 >= card.minPayment) {
+                    scenarios.push({ name: 'Scenario 4', payment: scenario4 });
+                } else {
+                    belowMinCount++;
+                }
+            }
+            
+            if (scenarios.length === 0) {
+                if (belowMinCount > 0) {
+                    showStatus('analysisStatus', `All scenario payments are below minimum payment of $${card.minPayment}`, 'error');
+                } else {
+                    showStatus('analysisStatus', 'Please enter at least one scenario payment amount', 'error');
+                }
+                return;
+            }
+            
+            let statusMessage = 'Running scenario comparison...';
+            if (belowMinCount > 0) {
+                statusMessage = `Running comparison (${belowMinCount} scenario${belowMinCount > 1 ? 's' : ''} excluded - below minimum payment)...`;
+            }
+            
+            showStatus('analysisStatus', statusMessage, 'success');
+            
+            google.script.run
+                .withSuccessHandler(() => {
+                    showStatus('analysisStatus', 'Custom scenario comparison completed!', 'success');
+                })
+                .withFailureHandler(onError)
+                .runCustomScenarios(cardName, scenarios);
+        }
+        
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear all credit card planner data? This cannot be undone.')) {
+                google.script.run
+                    .withSuccessHandler(() => {
+                        showStatus('analysisStatus', 'All data cleared successfully', 'success');
+                        refreshCards();
+                    })
+                    .withFailureHandler(onError)
+                    .clearAllData();
+            }
+        }
+        
+        function showStatus(elementId, message, type) {
+            const statusDiv = document.getElementById(elementId);
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+            
+            // Auto-hide after 5 seconds for success messages
+            if (type === 'success') {
+                setTimeout(() => {
+                    statusDiv.innerHTML = '';
+                }, 5000);
+            }
+        }
+        
+        function onError(error) {
+            showStatus('analysisStatus', 'Error: ' + error.message, 'error');
+            console.error(error);
+        }
+    </script>
+</body>
+</html>
